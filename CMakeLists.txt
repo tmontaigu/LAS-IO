@@ -17,6 +17,7 @@ if( PLUGIN_LAS_IO )
     
     add_subdirectory( include )
     add_subdirectory( src )
+    add_subdirectory( ui )
 
     # TODO install LASZIPLIBRARIES
 

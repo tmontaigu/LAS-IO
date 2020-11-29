@@ -19,7 +19,6 @@
 
 #include "FileIOFilter.h"
 
-
 class LASIOFilter : public FileIOFilter
 {
 public:
@@ -29,4 +28,6 @@ public:
 	CC_FILE_ERROR loadFile( const QString &fileName, ccHObject &container, LoadParameters &parameters ) override;
 	
 	bool canSave( CC_CLASS_ENUM type, bool &multiple, bool &exclusive ) const override;
+        CC_FILE_ERROR
+        saveToFile(ccHObject *entity, const QString &filename, const SaveParameters &parameters) override;
 };
