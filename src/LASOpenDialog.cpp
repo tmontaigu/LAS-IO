@@ -17,11 +17,31 @@
 
 #include "LASOpenDialog.h"
 
-static QListWidgetItem* createItem(const LasScalarField& lasScalarField) {
+static QListWidgetItem*CreateItem(const LasScalarField& lasScalarField) {
     auto item = new QListWidgetItem(lasScalarField.name);
     item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
     item->setCheckState(Qt::Checked);
     return item;
+}
+
+static QString PrettyFormatNumber(int64_t numPoints)
+{
+    QString num;
+    num.reserve(15);
+    while (numPoints != 0)
+    {
+        if (numPoints >= 1000)
+        {
+            num.prepend(QString::number(numPoints % 1000).rightJustified(3, '0'));
+        }
+        else
+        {
+            num.prepend(QString::number(numPoints % 1000));
+        }
+        num.prepend(" ");
+        numPoints /= 1'000;
+    }
+    return num;
 }
 
 LASOpenDialog::LASOpenDialog(QWidget *parent) : QDialog(parent) {
@@ -32,10 +52,17 @@ LASOpenDialog::LASOpenDialog(QWidget *parent) : QDialog(parent) {
     connect(cancelButton, &QPushButton::clicked, this, &QDialog::reject);
 }
 
+void LASOpenDialog::setInfo(int versionMinor, int pointFormatId, int64_t numPoints)
+{
+    versionLabelValue->setText(QString("1.%1").arg(QString::number(versionMinor)));
+    pointFormatLabelValue->setText(QString::number(pointFormatId));
+    numPointsLabelValue->setText(PrettyFormatNumber(numPoints));
+}
+
 void LASOpenDialog::setAvailableScalarFields(const std::vector<LasScalarField> &scalarFields)
 {
     for (const LasScalarField& lasScalarField : scalarFields) {
-        availableScalarFields->addItem(createItem(lasScalarField));
+        availableScalarFields->addItem(CreateItem(lasScalarField));
     }
 }
 

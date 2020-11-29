@@ -29,6 +29,7 @@
 
 // CCCoreLib
 #include <CCGeom.h>
+#include <ccLog.h>
 
 //! Dialog to choose the LAS fields to load
 class LASOpenDialog : public QDialog, public Ui::LASOpenDialog
@@ -39,23 +40,11 @@ class LASOpenDialog : public QDialog, public Ui::LASOpenDialog
     //! Default constructor
     explicit LASOpenDialog(QWidget *parent = nullptr);
 
-    void setInfo(int versionMinor, int pointFormatId, int64_t numPoints)
-    {
-        QString num;
-        num.reserve(15);
-        while (numPoints != 0) {
-            num.prepend(QString::number(numPoints % 1000).rightJustified(3, '0'));
-            num.prepend(" ");
-            numPoints /= 1'000;
-        }
+    void setInfo(int versionMinor, int pointFormatId, int64_t numPoints);
 
-        versionLabelValue->setText(QString("1.%1").arg(QString::number(versionMinor)));
-        pointFormatLabelValue->setText(QString::number(pointFormatId));
-        numPointsLabelValue->setText(num);
-    }
+    void setAvailableScalarFields(const std::vector<LasScalarField> &scalarFields);
 
-    void setAvailableScalarFields(const std::vector<LasScalarField>& scalarFields);
-    bool isChecked(const LasScalarField& lasScalarField) const;
+    bool isChecked(const LasScalarField &lasScalarField) const;
 };
 
 #endif // CC_LAS_OPEN_DIALOG
