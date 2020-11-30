@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Dialog</string>
+   <string>Open LAS file</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
@@ -117,23 +117,17 @@
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_2">
          <item>
-          <widget class="QListWidget" name="availableScalarFields"/>
-         </item>
-         <item>
-          <spacer name="verticalSpacer">
+          <widget class="QSplitter" name="splitter">
            <property name="orientation">
             <enum>Qt::Vertical</enum>
            </property>
-           <property name="sizeType">
-            <enum>QSizePolicy::Preferred</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>20</width>
-             <height>40</height>
-            </size>
-           </property>
-          </spacer>
+           <widget class="QListWidget" name="availableScalarFields"/>
+           <widget class="QListWidget" name="availableExtraScalarFields">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+           </widget>
+          </widget>
          </item>
         </layout>
        </widget>

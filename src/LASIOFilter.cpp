@@ -154,7 +154,6 @@ LASIOFilter::LASIOFilter()
 
 CC_FILE_ERROR LASIOFilter::loadFile(const QString &fileName, ccHObject &container, LoadParameters &parameters)
 {
-
     laszip_POINTER laszipReader{};
     laszip_header *laszipHeader{nullptr};
     laszip_BOOL isCompressed{false};
@@ -226,7 +225,7 @@ CC_FILE_ERROR LASIOFilter::loadFile(const QString &fileName, ccHObject &containe
 
     LASOpenDialog dialog;
     dialog.setInfo(laszipHeader->version_minor, laszipHeader->point_data_format, pointCount);
-    dialog.setAvailableScalarFields(availableScalarFields);
+    dialog.setAvailableScalarFields(availableScalarFields, availableEXtraScalarFields);
     dialog.exec();
     if (dialog.result() == QDialog::Rejected)
     {
@@ -236,15 +235,7 @@ CC_FILE_ERROR LASIOFilter::loadFile(const QString &fileName, ccHObject &containe
         return CC_FERR_CANCELED_BY_USER;
     }
 
-    auto firstNotChecked = std::partition(
-        availableScalarFields.begin(),
-        availableScalarFields.end(),
-        [&dialog, availableScalarFields](const LasScalarField &lasSF) { return dialog.isChecked(lasSF); });
-
-    if (firstNotChecked != availableScalarFields.end())
-    {
-        availableScalarFields.erase(firstNotChecked, availableScalarFields.end());
-    }
+    dialog.filterOutNotChecked(availableScalarFields, availableEXtraScalarFields);
 
     CCVector3d lasMins(laszipHeader->min_x, laszipHeader->min_y, laszipHeader->min_z);
 

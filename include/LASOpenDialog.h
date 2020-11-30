@@ -42,9 +42,15 @@ class LASOpenDialog : public QDialog, public Ui::LASOpenDialog
 
     void setInfo(int versionMinor, int pointFormatId, int64_t numPoints);
 
-    void setAvailableScalarFields(const std::vector<LasScalarField> &scalarFields);
+    void setAvailableScalarFields(const std::vector<LasScalarField> &scalarFields,
+                                  const std::vector<LasExtraScalarField> &extraScalarFields);
+
+    void filterOutNotChecked(std::vector<LasScalarField> &scalarFields,
+                             std::vector<LasExtraScalarField> &extraScalarFields);
 
     bool isChecked(const LasScalarField &lasScalarField) const;
+
+    bool isChecked(const LasExtraScalarField &lasExtraScalarField) const;
 };
 
 #endif // CC_LAS_OPEN_DIALOG

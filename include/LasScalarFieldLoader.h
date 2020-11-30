@@ -49,7 +49,7 @@ class LasScalarFieldLoader
         uint64_t unsignedValues[3];
         int64_t signedValues[3];
         double floatingValues[3];
-    } rawValues;
+    } rawValues{};
 };
 
 #endif // LASSCALARFIELDLOADER_H

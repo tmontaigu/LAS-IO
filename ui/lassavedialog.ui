@@ -286,6 +286,9 @@
       <attribute name="title">
        <string>Scalarfields Mapping</string>
       </attribute>
+      <attribute name="whatsThis">
+       <string>Select for each LAS dimension, the PointColoud Scalarfield to use</string>
+      </attribute>
       <layout class="QHBoxLayout" name="horizontalLayout_5">
        <item>
         <widget class="QFrame" name="scalarFieldFrame">

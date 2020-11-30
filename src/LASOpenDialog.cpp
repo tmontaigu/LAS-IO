@@ -17,8 +17,9 @@
 
 #include "LASOpenDialog.h"
 
-static QListWidgetItem*CreateItem(const LasScalarField& lasScalarField) {
-    auto item = new QListWidgetItem(lasScalarField.name);
+static QListWidgetItem *CreateItem(const char *name)
+{
+    auto item = new QListWidgetItem(name);
     item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
     item->setCheckState(Qt::Checked);
     return item;
@@ -44,7 +45,30 @@ static QString PrettyFormatNumber(int64_t numPoints)
     return num;
 }
 
-LASOpenDialog::LASOpenDialog(QWidget *parent) : QDialog(parent) {
+bool IsCheckedIn(const QString &name, const QListWidget &list)
+{
+    for (int i = 0; i < list.count(); ++i)
+    {
+        if (list.item(i)->text() == name)
+        {
+            return list.item(i)->checkState() == Qt::Checked;
+        }
+    }
+    return false;
+}
+
+template <typename T, typename Pred> void RemoveFalse(std::vector<T> &vec, Pred predicate)
+{
+    auto firstFalse = std::partition(vec.begin(), vec.end(), predicate);
+
+    if (firstFalse != vec.end())
+    {
+        vec.erase(firstFalse, vec.end());
+    }
+}
+
+LASOpenDialog::LASOpenDialog(QWidget *parent) : QDialog(parent)
+{
     setupUi(this);
 
     connect(applyButton, &QPushButton::clicked, this, &QDialog::accept);
@@ -59,19 +83,40 @@ void LASOpenDialog::setInfo(int versionMinor, int pointFormatId, int64_t numPoin
     numPointsLabelValue->setText(PrettyFormatNumber(numPoints));
 }
 
-void LASOpenDialog::setAvailableScalarFields(const std::vector<LasScalarField> &scalarFields)
+void LASOpenDialog::setAvailableScalarFields(const std::vector<LasScalarField> &scalarFields,
+                                             const std::vector<LasExtraScalarField> &extraScalarFields)
 {
-    for (const LasScalarField& lasScalarField : scalarFields) {
-        availableScalarFields->addItem(CreateItem(lasScalarField));
+    for (const LasScalarField &lasScalarField : scalarFields)
+    {
+        availableScalarFields->addItem(CreateItem(lasScalarField.name));
     }
+
+    availableExtraScalarFields->setEnabled(!extraScalarFields.empty());
+    for (const LasExtraScalarField &lasExtraScalarField : extraScalarFields)
+    {
+        availableExtraScalarFields->addItem(CreateItem(lasExtraScalarField.name));
+    }
+    int size =
+        (availableExtraScalarFields->sizeHintForRow(0) + 2 * availableExtraScalarFields->frameWidth()) *
+        availableExtraScalarFields->count();
+    availableExtraScalarFields->setMaximumHeight(size);
 }
 
-bool LASOpenDialog::isChecked(const LasScalarField& lasScalarField) const {
-    for (int i = 0; i < availableScalarFields->count(); ++i)
-    {
-        if (availableScalarFields->item(i)->text() == lasScalarField.name) {
-            return availableScalarFields->item(i)->checkState() == Qt::Checked;
-        }
-    }
-    return false;
+void LASOpenDialog::filterOutNotChecked(std::vector<LasScalarField> &scalarFields,
+                                        std::vector<LasExtraScalarField> &extraScalarFields)
+{
+    const auto isFieldSelected = [this](const auto &field) { return isChecked(field); };
+
+    RemoveFalse(scalarFields, isFieldSelected);
+    RemoveFalse(extraScalarFields, isFieldSelected);
+}
+
+bool LASOpenDialog::isChecked(const LasExtraScalarField &lasExtraScalarField) const
+{
+    return IsCheckedIn(lasExtraScalarField.name, *availableExtraScalarFields);
+}
+
+bool LASOpenDialog::isChecked(const LasScalarField &lasScalarField) const
+{
+    return IsCheckedIn(lasScalarField.name, *availableScalarFields);
 }
