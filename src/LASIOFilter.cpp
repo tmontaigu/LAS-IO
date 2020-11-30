@@ -159,8 +159,6 @@ CC_FILE_ERROR LASIOFilter::loadFile(const QString &fileName, ccHObject &containe
     laszip_BOOL isCompressed{false};
     laszip_CHAR *errorMsg{nullptr};
 
-    // TODO handle cleanup of laszip things on each error
-
     if (laszip_create(&laszipReader))
     {
         return CC_FERR_THIRD_PARTY_LIB_FAILURE;
@@ -314,19 +312,24 @@ CC_FILE_ERROR LASIOFilter::loadFile(const QString &fileName, ccHObject &containe
         pointCloud->addPoint(currentPoint);
 
         error = loader.handleScalarFields(*pointCloud, *laszipPoint);
-        if (error != CC_FERR_NO_ERROR) {
+        if (error != CC_FERR_NO_ERROR)
+        {
             break;
         }
 
-        loader.handleExtraScalarFields(*pointCloud, *laszipPoint);
+        error = loader.handleExtraScalarFields(*pointCloud, *laszipPoint);
+        if (error != CC_FERR_NO_ERROR)
+        {
+            break;
+        }
 
         if (HasRGB(laszipHeader->point_data_format))
         {
-           error = loader.handleRGBValue(*pointCloud, *laszipPoint);
+            error = loader.handleRGBValue(*pointCloud, *laszipPoint);
             if (error != CC_FERR_NO_ERROR)
             {
                 break;
-           }
+            }
         }
 
         if ((i - lastProgressUpdate) == numStepsForUpdate == 0)
@@ -356,7 +359,8 @@ CC_FILE_ERROR LASIOFilter::loadFile(const QString &fileName, ccHObject &containe
 
     container.addChild(pointCloud.release());
 
-    if (error == CC_FERR_THIRD_PARTY_LIB_FAILURE) {
+    if (error == CC_FERR_THIRD_PARTY_LIB_FAILURE)
+    {
         laszip_get_error(laszipHeader, &errorMsg);
         ccLog::Warning("[LAS] laszip error: '%s'", errorMsg);
         laszip_close_reader(laszipReader);
