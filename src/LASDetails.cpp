@@ -502,6 +502,11 @@ unsigned int LasExtraScalarField::numElements() const
     case i64_3:
     case f64_3:
         return 3;
+    case Undocumented:
+        return options;
+    case Invalid:
+        Q_ASSERT(false);
+        return 0;
     }
 }
 
