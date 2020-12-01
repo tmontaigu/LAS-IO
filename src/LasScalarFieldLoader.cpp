@@ -136,7 +136,8 @@ CC_FILE_ERROR LasScalarFieldLoader::handleExtraScalarFields(ccPointCloud &pointC
 
     for (const LasExtraScalarField &extraField : m_extraScalarFields)
     {
-        if (currentPoint.num_extra_bytes < 0 || extraField.byteOffset >= static_cast<unsigned int>(currentPoint.num_extra_bytes))
+        if (currentPoint.num_extra_bytes < 0 ||
+            extraField.byteOffset >= static_cast<unsigned int>(currentPoint.num_extra_bytes))
         {
             // TODO log error
             continue;
@@ -242,6 +243,7 @@ bool LasScalarFieldLoader::createScalarFieldsForExtraBytes(ccPointCloud &pointCl
             {
                 sprintf(name, "%s (Extra)", extraField.name);
                 extraField.scalarFields[0] = new ccScalarField(name);
+                extraField.ccName = name;
             }
             else
             {
@@ -255,43 +257,17 @@ bool LasScalarFieldLoader::createScalarFieldsForExtraBytes(ccPointCloud &pointCl
             pointCloud.addScalarField(extraField.scalarFields[0]);
             break;
         case 2:
-            sprintf(name, "%s [0]", extraField.name);
-            extraField.scalarFields[0] = new ccScalarField(name);
-            if (!extraField.scalarFields[0]->reserveSafe(pointCloud.capacity()))
-            {
-                return false;
-            }
-            pointCloud.addScalarField(extraField.scalarFields[0]);
-            sprintf(name, "%s [1]", extraField.name);
-            extraField.scalarFields[1] = new ccScalarField(name);
-            if (!extraField.scalarFields[1]->reserveSafe(pointCloud.capacity()))
-            {
-                return false;
-            }
-            pointCloud.addScalarField(extraField.scalarFields[1]);
-            break;
         case 3:
-            sprintf(name, "%s [0]", extraField.name);
-            extraField.scalarFields[0] = new ccScalarField(name);
-            if (!extraField.scalarFields[0]->reserveSafe(pointCloud.capacity()))
+            for (unsigned int dimIndex{0}; dimIndex < extraField.numElements(); ++dimIndex)
             {
-                return false;
+                sprintf(name, "%s [%d]", extraField.name, dimIndex);
+                extraField.scalarFields[dimIndex] = new ccScalarField(name);
+                if (!extraField.scalarFields[dimIndex]->reserveSafe(pointCloud.capacity()))
+                {
+                    return false;
+                }
+                pointCloud.addScalarField(extraField.scalarFields[dimIndex]);
             }
-            pointCloud.addScalarField(extraField.scalarFields[0]);
-            sprintf(name, "%s [1]", extraField.name);
-            extraField.scalarFields[1] = new ccScalarField(name);
-            if (!extraField.scalarFields[1]->reserveSafe(pointCloud.capacity()))
-            {
-                return false;
-            }
-            pointCloud.addScalarField(extraField.scalarFields[1]);
-            sprintf(name, "%s [2]", extraField.name);
-            extraField.scalarFields[2] = new ccScalarField(name);
-            if (!extraField.scalarFields[2]->reserveSafe(pointCloud.capacity()))
-            {
-                return false;
-            }
-            pointCloud.addScalarField(extraField.scalarFields[2]);
             break;
         }
     }

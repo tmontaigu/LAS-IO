@@ -16,6 +16,7 @@
 //##########################################################################
 
 #include <QString>
+#include <QDate>
 
 #include "LASIOFilter.h"
 #include "LASOpenDialog.h"
@@ -36,13 +37,6 @@
 #include <numeric>
 #include <utility>
 
-#define RETURN_IF_ERROR(errorValue)                                                                          \
-    if (errorValue != CC_FERR_NO_ERROR)                                                                      \
-    {                                                                                                        \
-        return errorValue;                                                                                   \
-    }
-
-const char *LAS_METADATA_SCALE_X = "LAS.scales.x";
 const char *LAS_METADATA_INFO_KEY = "LAS.savedInfo";
 
 /// Holds Meta-Information about the original file that we want to save
@@ -77,7 +71,8 @@ struct LasSavedInfo
     LasSavedInfo(const LasSavedInfo &rhs)
         : fileSourceId(rhs.fileSourceId), guidData1(rhs.guidData1), guidData2(rhs.guidData2),
           guidData3(rhs.guidData3), versionMinor(rhs.versionMinor), pointFormat(rhs.pointFormat),
-          xScale(rhs.xScale), yScale(rhs.yScale), zScale(rhs.zScale), numVlrs(rhs.numVlrs)
+          xScale(rhs.xScale), yScale(rhs.yScale), zScale(rhs.zScale), numVlrs(rhs.numVlrs),
+          extraScalarFields(rhs.extraScalarFields)
     {
 
         strncpy(guidData4, rhs.guidData4, 8);
@@ -105,6 +100,7 @@ struct LasSavedInfo
 
     laszip_U32 numVlrs{0};
     laszip_vlr_struct *vlrs{nullptr};
+    std::vector<LasExtraScalarField> extraScalarFields;
 };
 
 Q_DECLARE_METATYPE(LasSavedInfo);
@@ -139,6 +135,139 @@ static CCVector3d GetGlobalShift(FileIOFilter::LoadParameters &parameters,
     // restore previous parameters
     parameters.shiftHandlingMode = csModeBackup;
     return shift;
+}
+
+laszip_header
+InitLaszipHeader(const LASSaveDialog &saveDialog, LasSavedInfo &savedInfo, ccPointCloud &pointCloud)
+{
+    laszip_header laszipHeader{};
+
+    QDate currentDate = QDate::currentDate();
+    laszipHeader.file_creation_year = currentDate.year();
+    laszipHeader.file_creation_day = currentDate.dayOfYear();
+
+    // TODO global encoding
+    laszipHeader.version_major = 1;
+    laszipHeader.version_minor = saveDialog.selectedVersionMinor();
+    laszipHeader.point_data_format = saveDialog.selectedPointFormat();
+
+    laszipHeader.header_size = HeaderSize(laszipHeader.version_minor);
+    laszipHeader.offset_to_point_data = laszipHeader.header_size;
+    laszipHeader.point_data_record_length = PointFormatSize(laszipHeader.point_data_format);
+
+    CCVector3d lasScale = saveDialog.chosenScale();
+    laszipHeader.x_scale_factor = lasScale.x;
+    laszipHeader.y_scale_factor = lasScale.y;
+    laszipHeader.z_scale_factor = lasScale.z;
+
+    laszipHeader.file_source_ID = savedInfo.fileSourceId;
+    laszipHeader.project_ID_GUID_data_1 = savedInfo.guidData1;
+    laszipHeader.project_ID_GUID_data_2 = savedInfo.guidData2;
+    laszipHeader.project_ID_GUID_data_3 = savedInfo.guidData3;
+    strncpy(laszipHeader.project_ID_GUID_data_4, savedInfo.guidData4, 8);
+    strncpy(laszipHeader.system_identifier, savedInfo.systemIdentifier, 32);
+    strncpy(laszipHeader.generating_software, "CloudCompare", 32);
+
+    if (savedInfo.extraScalarFields.empty())
+    {
+        // 'steal' saved vlrs
+        laszipHeader.number_of_variable_length_records = savedInfo.numVlrs;
+        laszipHeader.vlrs = savedInfo.vlrs;
+        savedInfo.numVlrs = 0;
+        savedInfo.vlrs = nullptr;
+    }
+    else
+    {
+        laszipHeader.number_of_variable_length_records = savedInfo.numVlrs + 1;
+        laszipHeader.vlrs = new laszip_vlr_struct[laszipHeader.number_of_variable_length_records];
+        std::copy(savedInfo.vlrs, savedInfo.vlrs + savedInfo.numVlrs, laszipHeader.vlrs);
+
+        LasExtraScalarField::InitExtraBytesVlr(
+            laszipHeader.vlrs[laszipHeader.number_of_variable_length_records - 1],
+            savedInfo.extraScalarFields);
+    }
+
+    laszipHeader.offset_to_point_data +=
+        SizeOfVlrs(laszipHeader.vlrs, laszipHeader.number_of_variable_length_records);
+
+    if (pointCloud.isShifted())
+    {
+        laszipHeader.x_offset = -pointCloud.getGlobalShift().x;
+        laszipHeader.y_offset = -pointCloud.getGlobalShift().y;
+        laszipHeader.z_offset = -pointCloud.getGlobalShift().z;
+    }
+    else
+    {
+        CCVector3d bbMax;
+        CCVector3d bbMin;
+        pointCloud.getGlobalBB(bbMin, bbMax);
+        laszipHeader.x_offset = bbMin.x;
+        laszipHeader.y_offset = bbMin.y;
+        laszipHeader.z_offset = bbMin.z;
+    }
+
+    unsigned int byteOffset{0};
+    for (LasExtraScalarField &extraScalarField : savedInfo.extraScalarFields)
+    {
+        extraScalarField.byteOffset = byteOffset;
+        byteOffset += extraScalarField.byteSize();
+        if (extraScalarField.numElements() > 1)
+        {
+            // Array fields are split into multiple ccScalarField
+            // and each of them has the index appended to the name
+            char name[50];
+            unsigned int found{0};
+            for (int i = 0; i < extraScalarField.numElements(); ++i)
+            {
+                snprintf(name, 50, "%s [%d]", extraScalarField.name, i);
+                int pos = pointCloud.getScalarFieldIndexByName(name);
+                if (pos >= 0)
+                {
+                    extraScalarField.scalarFields[i] =
+                        dynamic_cast<ccScalarField *>(pointCloud.getScalarField(pos));
+                    found++;
+                    ccLog::Warning("[LAS] field %s found", name);
+                }
+                else
+                {
+                    ccLog::Warning("[LAS] field %s not found", name);
+                    extraScalarField.scalarFields[i] = nullptr;
+                }
+            }
+            if (found != extraScalarField.numElements())
+            {
+                // TODO
+                throw std::runtime_error("Not handled");
+            }
+        }
+        else
+        {
+            const char *nameToSearch;
+            if (!extraScalarField.ccName.empty())
+            {
+                // This field's name clashed with existing ccScalarField when created
+                nameToSearch = extraScalarField.ccName.c_str();
+            }
+            else
+            {
+                nameToSearch = extraScalarField.name;
+            }
+            int pos = pointCloud.getScalarFieldIndexByName(nameToSearch);
+            if (pos >= 0)
+            {
+                extraScalarField.scalarFields[0] =
+                    dynamic_cast<ccScalarField *>(pointCloud.getScalarField(pos));
+            }
+            else
+            {
+                ccLog::Warning("[LAS] field %s not found", nameToSearch);
+            }
+        }
+    }
+
+    unsigned int totalExtraByteSize = LasExtraScalarField::TotalExtraBytesSize(savedInfo.extraScalarFields);
+    laszipHeader.point_data_record_length += totalExtraByteSize;
+    return laszipHeader;
 }
 
 LASIOFilter::LASIOFilter()
@@ -355,6 +484,7 @@ CC_FILE_ERROR LASIOFilter::loadFile(const QString &fileName, ccHObject &containe
     }
 
     LasSavedInfo info(*laszipHeader);
+    info.extraScalarFields = availableEXtraScalarFields;
     pointCloud->setMetaData(LAS_METADATA_INFO_KEY, QVariant::fromValue(info));
 
     container.addChild(pointCloud.release());
@@ -394,7 +524,6 @@ CC_FILE_ERROR LASIOFilter::saveToFile(ccHObject *entity,
     }
     auto *pointCloud = static_cast<ccPointCloud *>(entity);
 
-    laszip_header laszipHeader{};
     if (!pointCloud->hasMetaData(LAS_METADATA_INFO_KEY))
     {
         ccLog::Warning("Cannot save cloud not loaded from las file");
@@ -427,56 +556,10 @@ CC_FILE_ERROR LASIOFilter::saveToFile(ccHObject *entity,
         return CC_FERR_CANCELED_BY_USER;
     }
 
-    // TODO global encoding
-    laszipHeader.version_major = 1;
-    laszipHeader.version_minor = saveDialog.selectedVersionMinor();
-    laszipHeader.point_data_format = saveDialog.selectedPointFormat();
-
-    laszipHeader.header_size = HeaderSize(laszipHeader.version_minor);
-    laszipHeader.offset_to_point_data = laszipHeader.header_size;
-    laszipHeader.point_data_record_length = PointFormatSize(laszipHeader.point_data_format);
-
-    CCVector3d lasScale = saveDialog.chosenScale();
-    laszipHeader.x_scale_factor = lasScale.x;
-    laszipHeader.y_scale_factor = lasScale.y;
-    laszipHeader.z_scale_factor = lasScale.z;
-
-    laszipHeader.file_source_ID = savedInfo.fileSourceId;
-    laszipHeader.project_ID_GUID_data_1 = savedInfo.guidData1;
-    laszipHeader.project_ID_GUID_data_2 = savedInfo.guidData2;
-    laszipHeader.project_ID_GUID_data_3 = savedInfo.guidData3;
-    strncpy(laszipHeader.project_ID_GUID_data_4, savedInfo.guidData4, 8);
-    strncpy(laszipHeader.system_identifier, savedInfo.systemIdentifier, 32);
-    strncpy(laszipHeader.generating_software, "CloudCompare", 32);
-
-    // 'steal' saved vlrs
-    laszipHeader.number_of_variable_length_records = savedInfo.numVlrs;
-    laszipHeader.vlrs = savedInfo.vlrs;
-    savedInfo.numVlrs = 0;
-    savedInfo.vlrs = nullptr;
-    laszipHeader.offset_to_point_data +=
-        std::accumulate(laszipHeader.vlrs,
-                        laszipHeader.vlrs + laszipHeader.number_of_variable_length_records,
-                        0,
-                        [](laszip_U32 size, const laszip_vlr_struct &vlr) {
-                            return vlr.record_length_after_header + LAS_VLR_HEADER_SIZE + size;
-                        });
-
-    if (pointCloud->isShifted())
-    {
-        laszipHeader.x_offset = -pointCloud->getGlobalShift().x;
-        laszipHeader.y_offset = -pointCloud->getGlobalShift().y;
-        laszipHeader.z_offset = -pointCloud->getGlobalShift().z;
-    }
-    else
-    {
-        laszipHeader.x_offset = bbMin.x;
-        laszipHeader.y_offset = bbMin.y;
-        laszipHeader.z_offset = bbMin.z;
-    }
+    laszip_header laszipHeader = InitLaszipHeader(saveDialog, savedInfo, *pointCloud);
 
     std::vector<LasScalarField> fieldsToSave = saveDialog.fieldsToSave();
-    LasScalarFieldSaver fieldSaver(fieldsToSave);
+    LasScalarFieldSaver fieldSaver(fieldsToSave, savedInfo.extraScalarFields);
 
     laszip_POINTER laszipWriter{nullptr};
     laszip_CHAR *errorMsg{nullptr};
@@ -504,10 +587,20 @@ CC_FILE_ERROR LASIOFilter::saveToFile(ccHObject *entity,
     }
 
     laszip_point laszipPoint{};
+    int totalExtraByteSize =
+        laszipHeader.point_data_record_length - PointFormatSize(laszipHeader.point_data_format);
+    if (totalExtraByteSize > 0)
+    {
+        laszipPoint.num_extra_bytes = totalExtraByteSize;
+        laszipPoint.extra_bytes = new laszip_U8[totalExtraByteSize];
+    }
+
     CC_FILE_ERROR error = CC_FERR_NO_ERROR;
     for (unsigned int i{0}; i < pointCloud->size(); ++i)
     {
         fieldSaver.handleScalarFields(i, laszipPoint);
+        fieldSaver.handleExtraFields(i, laszipPoint);
+
         const CCVector3 *point = pointCloud->getPoint(i);
         if (pointCloud->isShifted())
         {

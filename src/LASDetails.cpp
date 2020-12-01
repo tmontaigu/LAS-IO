@@ -322,6 +322,13 @@ bool isExtraBytesVlr(const laszip_vlr_struct &vlr)
     return false;
 }
 
+unsigned int SizeOfVlrs(const laszip_vlr_struct *vlrs, unsigned int numVlrs)
+{
+    return std::accumulate(vlrs, vlrs + numVlrs, 0, [](laszip_U32 size, const laszip_vlr_struct &vlr) {
+        return vlr.record_length_after_header + LAS_VLR_HEADER_SIZE + size;
+    });
+}
+
 LasExtraScalarField::LasExtraScalarField(QDataStream &dataStream)
 {
     uint8_t dataType;
@@ -339,6 +346,21 @@ LasExtraScalarField::LasExtraScalarField(QDataStream &dataStream)
     type = DataTypeFromValue(dataType);
 
     ccLog::Print("Extra: %s -> %d", name, dataType);
+}
+
+void LasExtraScalarField::writeTo(QDataStream &dataStream) const
+{
+    uint8_t emptyByte{0};
+    dataStream << emptyByte << emptyByte;
+    dataStream << typeCode() << options;
+    dataStream.writeRawData(name, 32);
+    dataStream << emptyByte << emptyByte << emptyByte << emptyByte;
+    dataStream.writeRawData(reinterpret_cast<const char *>(noData), 3 * 8);
+    dataStream.writeRawData(reinterpret_cast<const char *>(mins), 3 * 8);
+    dataStream.writeRawData(reinterpret_cast<const char *>(maxs), 3 * 8);
+    dataStream << scales[0] << scales[1] << scales[2];
+    dataStream << offsets[0] << offsets[1] << offsets[2];
+    dataStream.writeRawData(reinterpret_cast<const char *>(description), 32);
 }
 
 LasExtraScalarField::DataType LasExtraScalarField::DataTypeFromValue(uint8_t value)
@@ -414,55 +436,62 @@ LasExtraScalarField::DataType LasExtraScalarField::DataTypeFromValue(uint8_t val
     }
 }
 
-unsigned int LasExtraScalarField::byteSize() const
+unsigned int LasExtraScalarField::elementSize() const
 {
     switch (type)
     {
-    case u8:
-    case i8:
-        return 1;
-    case u16:
-    case i16:
-        return 2;
-    case u32:
-    case i32:
-    case f32:
-        return 4;
-    case u64:
-    case i64:
-    case f64:
-        return 8;
-    case u8_2:
-    case i8_2:
-        return 2 * 1;
-    case u16_2:
-    case i16_2:
-        return 2 * 2;
-    case u32_2:
-    case i32_2:
-    case f32_2:
-        return 2 * 4;
-    case u64_2:
-    case i64_2:
-    case f64_2:
-        return 2 * 8;
-    case u8_3:
-    case i8_3:
-        return 3 * 1;
-    case i16_3:
-    case u16_3:
-        return 3 * 2;
-    case u32_3:
-    case i32_3:
-    case f32_3:
-        return 3 * 4;
-    case u64_3:
-    case i64_3:
-    case f64_3:
-        return 3 * 8;
+
     case Undocumented:
-        return options;
+    case u8_3:
+    case u8_2:
+    case u8:
+        return sizeof(uint8_t);
+    case u16_3:
+    case u16_2:
+    case u16:
+        return sizeof(uint16_t);
+    case u32_3:
+    case u32_2:
+    case u32:
+        return sizeof(uint32_t);
+    case u64_3:
+    case u64_2:
+    case u64:
+        return sizeof(uint64_t);
+    case i8_3:
+    case i8_2:
+    case i8:
+        return sizeof(int8_t);
+    case i16_3:
+    case i16_2:
+    case i16:
+        return sizeof(int16_t);
+    case i32_3:
+    case i32_2:
+    case i32:
+        return sizeof(int32_t);
+    case i64_3:
+    case i64_2:
+    case i64:
+        return sizeof(int64_t);
+    case f32_3:
+        break;
+    case f32_2:
+    case f32:
+        return sizeof(float);
+    case f64_3:
+        break;
+    case f64_2:
+    case f64:
+        return sizeof(double);
+    case Invalid:
+        return 0;
     }
+    return 0;
+}
+unsigned int LasExtraScalarField::byteSize() const
+{
+    return elementSize() * numElements();
 }
 
 unsigned int LasExtraScalarField::numElements() const
@@ -532,11 +561,12 @@ LasExtraScalarField::ParseExtraScalarFields(const laszip_vlr_struct &extraBytesV
         {
             info.push_back(ebInfo);
             info.back().byteOffset = byteOffset;
-        } else {
+        }
+        else
+        {
             ccLog::Warning("Undocumented or invalid Extra Bytes are not supporrted");
         }
         byteOffset += ebInfo.byteSize();
-
     }
     return info;
 }
@@ -608,38 +638,36 @@ LasExtraScalarField::Kind LasExtraScalarField::kind() const
     }
 }
 
-ScalarType SignedIntegeParser::parseFrom(uint8_t *data)
+void LasExtraScalarField::InitExtraBytesVlr(laszip_vlr_struct &vlr,
+                                            const vector<LasExtraScalarField> &extraFields)
 {
-    switch (eb->type)
+    strcpy(vlr.user_id, "LASF_Spec");
+    vlr.record_id = 4;
+    vlr.record_length_after_header = 192 * extraFields.size();
+    vlr.data = new laszip_U8[vlr.record_length_after_header];
+
+    QByteArray byteArray;
+    byteArray.resize(vlr.record_length_after_header);
+    QDataStream dataStream(&byteArray, QIODevice::WriteOnly);
+    for (const LasExtraScalarField &extraScalarField : extraFields)
     {
-    case LasExtraScalarField::i8:
-        break;
-    case LasExtraScalarField::i16:
-        break;
-    case LasExtraScalarField::i32:
-        break;
-    case LasExtraScalarField::i64:
-        break;
-    case LasExtraScalarField::f32:
-        break;
-    case LasExtraScalarField::f64:
-        break;
-    case LasExtraScalarField::u8_2:
-        break;
-    case LasExtraScalarField::u16_2:
-        break;
-    case LasExtraScalarField::u32_2:
-        break;
-    case LasExtraScalarField::u64_2:
-        break;
-    case LasExtraScalarField::i8_2:
-        break;
-    case LasExtraScalarField::i16_2:
-        break;
-    case LasExtraScalarField::i32_2:
-        break;
-    case LasExtraScalarField::i64_2:
-        break;
+        extraScalarField.writeTo(dataStream);
     }
-    return 0.0;
+    Q_ASSERT(byteArray.size() == vlr.record_length_after_header);
+    std::copy(byteArray.begin(), byteArray.end(), vlr.data);
+}
+
+uint8_t LasExtraScalarField::typeCode() const
+{
+    return static_cast<uint8_t>(type);
+}
+
+unsigned int
+LasExtraScalarField::TotalExtraBytesSize(const std::vector<LasExtraScalarField> &extraScalarFields)
+{
+    return std::accumulate(
+        extraScalarFields.begin(),
+        extraScalarFields.end(),
+        0,
+        [](unsigned int sum, const LasExtraScalarField &field) { return sum + field.byteSize(); });
 }

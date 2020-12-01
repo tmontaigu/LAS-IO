@@ -137,13 +137,16 @@ unsigned int LASSaveDialog::selectedVersionMinor() const
 
 CCVector3d LASSaveDialog::chosenScale() const
 {
-    const auto vectorFromString = [](const QString &string) {
-        QVector<QStringRef> splits = string.splitRef('.');
+    const auto vectorFromString = [](const QString &string) -> CCVector3d {
+        QVector<QStringRef> splits = string.splitRef(',');
         if (splits.size() == 3)
         {
-            return CCVector3d(splits[0].toDouble(), splits[1].toDouble(), splits[2].toDouble());
+            double x = splits[0].right(splits[0].size() - 1).toDouble();
+            double y = splits[1].toDouble();
+            double z = splits[2].left(splits[2].size() - 1).toDouble();
+            return {x, y, z};
         }
-        return CCVector3d();
+        return {};
     };
     if (bestRadioButton_2->isChecked())
     {
@@ -158,7 +161,7 @@ CCVector3d LASSaveDialog::chosenScale() const
     else if (customRadioButton_2->isChecked())
     {
         double value =  customScaleDoubleSpinBox_2->value();
-        return CCVector3d(value, value, value);
+        return {value, value, value};
     }
     return {};
 }

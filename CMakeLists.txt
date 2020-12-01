@@ -7,6 +7,8 @@ if( PLUGIN_LAS_IO )
 
     list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
+    target_compile_definitions(${PROJECT_NAME} PRIVATE -DQT_FORCE_ASSERTS)
+
     find_package(LASzip REQUIRED)
 
     message("LOL ${LASZIP_INCLUDE_DIR}")

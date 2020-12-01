@@ -6,6 +6,7 @@
 #define LASDETAILS_H
 
 #include <CCTypes.h>
+#include <string>
 #include <vector>
 
 class ccScalarField;
@@ -114,15 +115,18 @@ const std::vector<unsigned int> *PointFormatsAvailableForVersion(const char *ver
 
 std::vector<LasScalarField> LasScalarFieldForPointFormat(unsigned int pointFormatId);
 
+unsigned int SizeOfVlrs(const laszip_vlr_struct* vlrs, unsigned int numVlrs);
+
 bool isLaszipVlr(const laszip_vlr_struct &);
 
 bool isExtraBytesVlr(const laszip_vlr_struct &);
+
 
 struct LasExtraScalarField
 {
     enum DataType
     {
-        Undocumented,
+        Undocumented = 0,
         u8,
         u16,
         u32,
@@ -166,8 +170,17 @@ struct LasExtraScalarField
     explicit LasExtraScalarField(QDataStream &dataStream);
     static std::vector<LasExtraScalarField> ParseExtraScalarFields(const laszip_vlr_struct &extraBytesVlr);
 
-    unsigned int byteSize() const;
+    static void InitExtraBytesVlr(laszip_vlr_struct &vlr, const std::vector<LasExtraScalarField> &extraFields);
+    static unsigned int TotalExtraBytesSize(const std::vector<LasExtraScalarField>& extraScalarFields);
+
+    void writeTo(QDataStream &dataStream) const;
+
+
+    uint8_t typeCode() const;
+
+    unsigned int elementSize() const;
     unsigned int numElements() const;
+    unsigned int byteSize() const;
     Kind kind() const;
 
     // Options
@@ -180,8 +193,8 @@ struct LasExtraScalarField
     static DataType DataTypeFromValue(uint8_t value);
 
     // These info are from the vlr itself
-    DataType type;
-    uint8_t options;
+    DataType type{Undocumented};
+    uint8_t options{};
     char name[32] = "";
     char description[32] = "";
     uint8_t noData[3][8] = {0};
@@ -193,24 +206,14 @@ struct LasExtraScalarField
     // These are added by us
     unsigned int byteOffset = {0};
     ccScalarField *scalarFields[3] = {nullptr};
+    // This strings store the name of the field in CC,
+    // As we split array-based extra fields into multiple scalarfields
+    // we change the name, of the new fields
+    // also some extra fields name may clash with existing scalarfields name
+    // (eg: the user calls one of his extra field "Intensity")
+    // we have to alter the real name
+    std::string ccName{};
 };
-
-class IExtraByteParser
-{
-  public:
-    virtual ScalarType parseFrom(uint8_t *data) = 0;
-    virtual ~IExtraByteParser() = default;
-};
-
-class SignedIntegeParser : public IExtraByteParser
-{
-  public:
-    ScalarType parseFrom(uint8_t *data) override;
-
-  private:
-    const LasExtraScalarField *eb{nullptr};
-};
-
 
 
 
