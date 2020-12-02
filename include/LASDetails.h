@@ -14,6 +14,7 @@ class ccScalarField;
 
 class QDataStream;
 
+struct laszip_header;
 struct laszip_vlr;
 typedef laszip_vlr laszip_vlr_struct;
 
@@ -172,6 +173,7 @@ struct LasExtraScalarField
     void writeTo(QDataStream &dataStream) const;
 
     // Static Helper functions that works on collection of LasExtraScalarFields
+    static std::vector<LasExtraScalarField> ParseExtraScalarFields(const laszip_header &laszipHeader);
     static std::vector<LasExtraScalarField> ParseExtraScalarFields(const laszip_vlr_struct &extraBytesVlr);
     static void InitExtraBytesVlr(laszip_vlr_struct &vlr,
                                   const std::vector<LasExtraScalarField> &extraFields);
@@ -222,5 +224,6 @@ struct LasExtraScalarField
     // we have to alter the real name
     std::string ccName{};
 };
+
 
 #endif // LASDETAILS_H

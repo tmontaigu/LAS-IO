@@ -284,14 +284,8 @@ CC_FILE_ERROR LASIOFilter::loadFile(const QString &fileName, ccHObject &containe
     std::vector<LasScalarField> availableScalarFields =
         LasScalarFieldForPointFormat(laszipHeader->point_data_format);
 
-    std::vector<LasExtraScalarField> availableEXtraScalarFields;
-    auto *extraBytesVlr = std::find_if(laszipHeader->vlrs,
-                                       laszipHeader->vlrs + laszipHeader->number_of_variable_length_records,
-                                       isExtraBytesVlr);
-    if (extraBytesVlr < laszipHeader->vlrs + laszipHeader->number_of_variable_length_records)
-    {
-        availableEXtraScalarFields = LasExtraScalarField::ParseExtraScalarFields(*extraBytesVlr);
-    }
+    std::vector<LasExtraScalarField> availableEXtraScalarFields =
+        LasExtraScalarField::ParseExtraScalarFields(*laszipHeader);
 
     LASOpenDialog dialog;
     dialog.setInfo(laszipHeader->version_minor, laszipHeader->point_data_format, pointCount);
@@ -326,7 +320,6 @@ CC_FILE_ERROR LASIOFilter::loadFile(const QString &fileName, ccHObject &containe
         return CC_FERR_NOT_ENOUGH_MEMORY;
     }
 
-    ccLog::Print("Extra bytes: %d", availableEXtraScalarFields.size());
     LasScalarFieldLoader loader(availableScalarFields, availableEXtraScalarFields, *pointCloud);
 
     QElapsedTimer timer;

@@ -540,6 +540,19 @@ unsigned int LasExtraScalarField::numElements() const
 }
 
 std::vector<LasExtraScalarField>
+LasExtraScalarField::ParseExtraScalarFields(const laszip_header &laszipHeader)
+{
+    auto *extraBytesVlr = std::find_if(laszipHeader.vlrs,
+                                       laszipHeader.vlrs + laszipHeader.number_of_variable_length_records,
+                                       isExtraBytesVlr);
+    if (extraBytesVlr < laszipHeader.vlrs + laszipHeader.number_of_variable_length_records)
+    {
+        return LasExtraScalarField::ParseExtraScalarFields(*extraBytesVlr);
+    }
+    return {};
+}
+
+std::vector<LasExtraScalarField>
 LasExtraScalarField::ParseExtraScalarFields(const laszip_vlr_struct &extraBytesVlr)
 {
     if (!isExtraBytesVlr(extraBytesVlr))
