@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 
+class ccPointCloud;
 class ccScalarField;
 
 class QDataStream;
@@ -26,7 +27,7 @@ constexpr const char *ReturnNumber = "Return Number";
 constexpr const char *NumberOfReturns = "Number Of Returns";
 constexpr const char *ScanDirectionFlag = "Scan Direction Flag";
 constexpr const char *EdgeOfFlightLine = "EdgeOfFlightLine";
-constexpr const char *Classification = "Classificatopn";
+constexpr const char *Classification = "Classification";
 constexpr const char *SyntheticFlag = "Synthetic Flag";
 constexpr const char *KeypointFlag = "Keypoint Flag";
 constexpr const char *WithheldFlag = "Withheld Flag";
@@ -115,12 +116,11 @@ const std::vector<unsigned int> *PointFormatsAvailableForVersion(const char *ver
 
 std::vector<LasScalarField> LasScalarFieldForPointFormat(unsigned int pointFormatId);
 
-unsigned int SizeOfVlrs(const laszip_vlr_struct* vlrs, unsigned int numVlrs);
+unsigned int SizeOfVlrs(const laszip_vlr_struct *vlrs, unsigned int numVlrs);
 
 bool isLaszipVlr(const laszip_vlr_struct &);
 
 bool isExtraBytesVlr(const laszip_vlr_struct &);
-
 
 struct LasExtraScalarField
 {
@@ -160,7 +160,8 @@ struct LasExtraScalarField
         Invalid
     };
 
-    enum Kind {
+    enum Kind
+    {
         Signed,
         Unsigned,
         Floating
@@ -168,30 +169,38 @@ struct LasExtraScalarField
 
   public:
     explicit LasExtraScalarField(QDataStream &dataStream);
-    static std::vector<LasExtraScalarField> ParseExtraScalarFields(const laszip_vlr_struct &extraBytesVlr);
-
-    static void InitExtraBytesVlr(laszip_vlr_struct &vlr, const std::vector<LasExtraScalarField> &extraFields);
-    static unsigned int TotalExtraBytesSize(const std::vector<LasExtraScalarField>& extraScalarFields);
-
     void writeTo(QDataStream &dataStream) const;
 
+    // Static Helper functions that works on collection of LasExtraScalarFields
+    static std::vector<LasExtraScalarField> ParseExtraScalarFields(const laszip_vlr_struct &extraBytesVlr);
+    static void InitExtraBytesVlr(laszip_vlr_struct &vlr,
+                                  const std::vector<LasExtraScalarField> &extraFields);
+    static void UpdateByteOffsets(std::vector<LasExtraScalarField> &extraFields);
+    static unsigned int TotalExtraBytesSize(const std::vector<LasExtraScalarField> &extraScalarFields);
+    static void MatchExtraBytesToScalarFields(std::vector<LasExtraScalarField> &extraScalarFields,
+                                              const ccPointCloud &pointCloud);
 
+    // LAS Spec integer value for the type
     uint8_t typeCode() const;
 
+    // Properties we can derive from the type attribute
     unsigned int elementSize() const;
     unsigned int numElements() const;
     unsigned int byteSize() const;
     Kind kind() const;
 
-    // Options
+    // Properties we can derive from the type options attribute
     bool noDataIsRelevant() const;
     bool minIsRelevant() const;
     bool maxIsRelevant() const;
     bool scaleIsRelevant() const;
     bool offsetIsRelevant() const;
 
+    void resetScalarFieldsPointers();
+
     static DataType DataTypeFromValue(uint8_t value);
 
+  public: // Data members
     // These info are from the vlr itself
     DataType type{Undocumented};
     uint8_t options{};
@@ -206,15 +215,12 @@ struct LasExtraScalarField
     // These are added by us
     unsigned int byteOffset = {0};
     ccScalarField *scalarFields[3] = {nullptr};
+    // TODO explain better
     // This strings store the name of the field in CC,
-    // As we split array-based extra fields into multiple scalarfields
-    // we change the name, of the new fields
-    // also some extra fields name may clash with existing scalarfields name
+    // Extra fields name may clash with existing scalarfields name
     // (eg: the user calls one of his extra field "Intensity")
     // we have to alter the real name
     std::string ccName{};
 };
-
-
 
 #endif // LASDETAILS_H

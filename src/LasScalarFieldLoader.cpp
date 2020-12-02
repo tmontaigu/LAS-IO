@@ -9,9 +9,11 @@
 
 // TODO take by move
 LasScalarFieldLoader::LasScalarFieldLoader(std::vector<LasScalarField> standardScalarFields,
-                                           std::vector<LasExtraScalarField> extraScalarFields)
+                                           std::vector<LasExtraScalarField> extraScalarFields,
+                                           ccPointCloud &pointCloud)
     : m_standardFields(std::move(standardScalarFields)), m_extraScalarFields(std::move(extraScalarFields))
 {
+    createScalarFieldsForExtraBytes(pointCloud);
 }
 
 CC_FILE_ERROR LasScalarFieldLoader::handleScalarFields(ccPointCloud &pointCloud,
@@ -136,21 +138,7 @@ CC_FILE_ERROR LasScalarFieldLoader::handleExtraScalarFields(ccPointCloud &pointC
 
     for (const LasExtraScalarField &extraField : m_extraScalarFields)
     {
-        if (currentPoint.num_extra_bytes < 0 ||
-            extraField.byteOffset >= static_cast<unsigned int>(currentPoint.num_extra_bytes))
-        {
-            // TODO log error
-            continue;
-        }
-
-        if (extraField.scalarFields[0] == nullptr)
-        {
-            // TODO move that in init fn or ctor
-            if (!createScalarFieldsForExtraBytes(pointCloud))
-            {
-                return CC_FERR_NOT_ENOUGH_MEMORY;
-            }
-        }
+        Q_ASSERT(extraField.byteOffset + extraField.byteSize() <= currentPoint.num_extra_bytes);
 
         laszip_U8 *dataStart = currentPoint.extra_bytes + extraField.byteOffset;
         parseRawValues(extraField, dataStart);
@@ -183,9 +171,10 @@ LasScalarFieldLoader::handleScalarField(LasScalarField &sfInfo, ccPointCloud &po
         {
             return CC_FERR_NOT_ENOUGH_MEMORY;
         }
-        for (unsigned int j{0}; j < pointCloud.size() - 1; ++j)
+        // addScalarField resizes the point scalarField
+        for (unsigned int j{0}; j < newSf->size() - 1; ++j)
         {
-            newSf->addElement(static_cast<ScalarType>(T{}));
+            newSf->setValue(j, static_cast<ScalarType>(T{}));
         }
     }
 
@@ -211,9 +200,10 @@ LasScalarFieldLoader::handleGpsTime(LasScalarField &sfInfo, ccPointCloud &pointC
 
         newSf->setGlobalShift(currentValue);
 
-        for (unsigned int j{0}; j < pointCloud.size() - 1; ++j)
+        // addScalarField resizes the point scalarField
+        for (unsigned int j{0}; j < newSf->size() - 1; ++j)
         {
-            newSf->addElement(static_cast<ScalarType>(0.0));
+            newSf->setValue(j, static_cast<ScalarType>(0.0));
         }
     }
 
@@ -229,13 +219,6 @@ bool LasScalarFieldLoader::createScalarFieldsForExtraBytes(ccPointCloud &pointCl
     char name[50];
     for (LasExtraScalarField &extraField : m_extraScalarFields)
     {
-        if (extraField.offsetIsRelevant())
-        {
-            for (unsigned int i = 0; i < extraField.numElements(); ++i)
-            {
-                extraField.scalarFields[i]->setGlobalShift(extraField.offsets[i]);
-            }
-        }
         switch (extraField.numElements())
         {
         case 1:
@@ -269,6 +252,13 @@ bool LasScalarFieldLoader::createScalarFieldsForExtraBytes(ccPointCloud &pointCl
                 pointCloud.addScalarField(extraField.scalarFields[dimIndex]);
             }
             break;
+        }
+        if (extraField.offsetIsRelevant())
+        {
+            for (unsigned int i = 0; i < extraField.numElements(); ++i)
+            {
+                extraField.scalarFields[i]->setGlobalShift(extraField.offsets[i]);
+            }
         }
     }
     return true;

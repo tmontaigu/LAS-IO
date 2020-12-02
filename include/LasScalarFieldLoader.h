@@ -14,7 +14,8 @@ class LasScalarFieldLoader
 {
   public:
     LasScalarFieldLoader(std::vector<LasScalarField> standardScalarFields,
-                         std::vector<LasExtraScalarField> extraScalarFields);
+                         std::vector<LasExtraScalarField> extraScalarFields,
+                         ccPointCloud &pointCloud);
 
     CC_FILE_ERROR handleScalarFields(ccPointCloud &pointCloud, const laszip_point &currentPoint);
 
@@ -36,8 +37,7 @@ class LasScalarFieldLoader
 
     void parseRawValues(const LasExtraScalarField &extraField, uint8_t *dataStart);
 
-    template <typename T>
-    void handleOptionsFor(const LasExtraScalarField& extraField, T values[3]);
+    template <typename T> void handleOptionsFor(const LasExtraScalarField &extraField, T values[3]);
 
   private:
     unsigned char colorCompShift{0};

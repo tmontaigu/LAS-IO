@@ -21,13 +21,14 @@
 
 class LASIOFilter : public FileIOFilter
 {
-public:
-  LASIOFilter();
-	
-	// Inherited from FileIOFilter
-	CC_FILE_ERROR loadFile( const QString &fileName, ccHObject &container, LoadParameters &parameters ) override;
-	
-	bool canSave( CC_CLASS_ENUM type, bool &multiple, bool &exclusive ) const override;
-        CC_FILE_ERROR
-        saveToFile(ccHObject *entity, const QString &filename, const SaveParameters &parameters) override;
+  public:
+    LASIOFilter();
+
+    // Inherited from FileIOFilter
+    CC_FILE_ERROR
+    loadFile(const QString &fileName, ccHObject &container, LoadParameters &parameters) override;
+
+    bool canSave(CC_CLASS_ENUM type, bool &multiple, bool &exclusive) const override;
+    CC_FILE_ERROR
+    saveToFile(ccHObject *entity, const QString &filename, const SaveParameters &parameters) override;
 };

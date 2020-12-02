@@ -4,7 +4,8 @@
 
 #include <ccScalarField.h>
 
-LasScalarFieldSaver::LasScalarFieldSaver(std::vector<LasScalarField> standardFields, std::vector<LasExtraScalarField> extraFields)
+LasScalarFieldSaver::LasScalarFieldSaver(std::vector<LasScalarField> standardFields,
+                                         std::vector<LasExtraScalarField> extraFields)
     : m_standardFields(std::move(standardFields)), m_extraFields(std::move(extraFields))
 {
 }
@@ -137,16 +138,18 @@ void LasScalarFieldSaver::handleScalarFields(size_t i, laszip_point &point)
         }
     }
 }
-void LasScalarFieldSaver::handleExtraFields(size_t i, laszip_point &point) {
+void LasScalarFieldSaver::handleExtraFields(size_t i, laszip_point &point)
+{
     if (point.num_extra_bytes == 0 || point.extra_bytes == nullptr)
     {
         return;
     }
 
-    for (const LasExtraScalarField& extraField : m_extraFields)
+    for (const LasExtraScalarField &extraField : m_extraFields)
     {
         laszip_U8 *dataStart = point.extra_bytes + extraField.byteOffset;
-        ccLog::Print("max : %d offset %d", extraField.byteSize() + extraField.byteOffset, extraField.byteOffset);
+        ccLog::Print(
+            "max : %d offset %d", extraField.byteSize() + extraField.byteOffset, extraField.byteOffset);
 
         Q_ASSERT(extraField.byteOffset < point.num_extra_bytes);
         Q_ASSERT(extraField.byteOffset + extraField.byteSize() <= point.num_extra_bytes);

@@ -7,6 +7,8 @@
 #include <laszip/laszip_api.h>
 
 #include <ccLog.h>
+#include <ccPointCloud.h>
+#include <ccScalarField.h>
 
 #include <QDataStream>
 
@@ -344,8 +346,6 @@ LasExtraScalarField::LasExtraScalarField(QDataStream &dataStream)
     dataStream.readRawData(reinterpret_cast<char *>(description), 32);
 
     type = DataTypeFromValue(dataType);
-
-    ccLog::Print("Extra: %s -> %d", name, dataType);
 }
 
 void LasExtraScalarField::writeTo(QDataStream &dataStream) const
@@ -440,7 +440,6 @@ unsigned int LasExtraScalarField::elementSize() const
 {
     switch (type)
     {
-
     case Undocumented:
     case u8_3:
     case u8_2:
@@ -475,18 +474,18 @@ unsigned int LasExtraScalarField::elementSize() const
     case i64:
         return sizeof(int64_t);
     case f32_3:
-        break;
     case f32_2:
     case f32:
         return sizeof(float);
     case f64_3:
-        break;
     case f64_2:
     case f64:
         return sizeof(double);
     case Invalid:
         return 0;
     }
+
+    Q_ASSERT_X(false, "elementSize", "Unhandled data type");
     return 0;
 }
 unsigned int LasExtraScalarField::byteSize() const
@@ -537,6 +536,7 @@ unsigned int LasExtraScalarField::numElements() const
         Q_ASSERT(false);
         return 0;
     }
+    Q_ASSERT_X(false, "numElements", "Unhandled data type");
 }
 
 std::vector<LasExtraScalarField>
@@ -557,7 +557,8 @@ LasExtraScalarField::ParseExtraScalarFields(const laszip_vlr_struct &extraBytesV
     for (int j{0}; j < numExtraFields; ++j)
     {
         LasExtraScalarField ebInfo(dataStream);
-        if (ebInfo.type != DataType::Undocumented && ebInfo.DataType::Invalid)
+
+        if (ebInfo.type != DataType::Undocumented && ebInfo.type != ebInfo.DataType::Invalid)
         {
             info.push_back(ebInfo);
             info.back().byteOffset = byteOffset;
@@ -566,7 +567,13 @@ LasExtraScalarField::ParseExtraScalarFields(const laszip_vlr_struct &extraBytesV
         {
             ccLog::Warning("Undocumented or invalid Extra Bytes are not supporrted");
         }
+
         byteOffset += ebInfo.byteSize();
+        ccLog::Print("Extra: %s -> %d, size %d offset %d",
+                     ebInfo.name,
+                     ebInfo.type,
+                     ebInfo.byteSize(),
+                     ebInfo.byteOffset);
     }
     return info;
 }
@@ -644,6 +651,7 @@ void LasExtraScalarField::InitExtraBytesVlr(laszip_vlr_struct &vlr,
     strcpy(vlr.user_id, "LASF_Spec");
     vlr.record_id = 4;
     vlr.record_length_after_header = 192 * extraFields.size();
+    std::fill(vlr.description, vlr.description + 32, 0);
     vlr.data = new laszip_U8[vlr.record_length_after_header];
 
     QByteArray byteArray;
@@ -670,4 +678,88 @@ LasExtraScalarField::TotalExtraBytesSize(const std::vector<LasExtraScalarField> 
         extraScalarFields.end(),
         0,
         [](unsigned int sum, const LasExtraScalarField &field) { return sum + field.byteSize(); });
+}
+
+void LasExtraScalarField::resetScalarFieldsPointers()
+{
+    for (int i{0}; i < 3; ++i)
+    {
+        scalarFields[i] = nullptr;
+    }
+}
+
+void LasExtraScalarField::UpdateByteOffsets(vector<LasExtraScalarField> &extraFields)
+{
+    unsigned int byteOffset{0};
+    for (LasExtraScalarField &extraScalarField : extraFields)
+    {
+        extraScalarField.byteOffset = byteOffset;
+        byteOffset += extraScalarField.byteSize();
+    }
+}
+void LasExtraScalarField::MatchExtraBytesToScalarFields(vector<LasExtraScalarField> &extraScalarFields,
+                                                        const ccPointCloud &pointCloud)
+{
+    for (LasExtraScalarField &extraScalarField : extraScalarFields)
+    {
+        if (extraScalarField.numElements() > 1)
+        {
+            // Array fields are split into multiple ccScalarField
+            // and each of them has the index appended to the name
+            char name[50];
+            unsigned int found{0};
+            for (int i = 0; i < extraScalarField.numElements(); ++i)
+            {
+                snprintf(name, 50, "%s [%d]", extraScalarField.name, i);
+                int pos = pointCloud.getScalarFieldIndexByName(name);
+                if (pos >= 0)
+                {
+                    extraScalarField.scalarFields[i] =
+                        dynamic_cast<ccScalarField *>(pointCloud.getScalarField(pos));
+                    found++;
+                    ccLog::Warning("[LAS] field %s found", name);
+                }
+                else
+                {
+                    ccLog::Warning("[LAS] field %s not found", name);
+                    extraScalarField.scalarFields[i] = nullptr;
+                }
+            }
+        }
+        else
+        {
+            const char *nameToSearch;
+            if (!extraScalarField.ccName.empty())
+            {
+                // This field's name clashed with existing ccScalarField when created
+                nameToSearch = extraScalarField.ccName.c_str();
+            }
+            else
+            {
+                nameToSearch = extraScalarField.name;
+            }
+            int pos = pointCloud.getScalarFieldIndexByName(nameToSearch);
+            if (pos >= 0)
+            {
+                extraScalarField.scalarFields[0] =
+                    dynamic_cast<ccScalarField *>(pointCloud.getScalarField(pos));
+            }
+            else
+            {
+                ccLog::Warning("[LAS] field %s not found", nameToSearch);
+            }
+        }
+    }
+    // Remove any Extra Scalar Field for which we could not get _all_ the corresponding
+    // ccScalarField
+    const auto notAllScalarFieldWereFound = [](const LasExtraScalarField &extraScalarField) {
+        const auto ptrIsNull = [](const ccScalarField *ptr) { return ptr == nullptr; };
+        return std::any_of(extraScalarField.scalarFields,
+                           extraScalarField.scalarFields + extraScalarField.numElements(),
+                           ptrIsNull);
+    };
+
+    auto firstToRemove =
+        std::remove_if(extraScalarFields.begin(), extraScalarFields.end(), notAllScalarFieldWereFound);
+    extraScalarFields.erase(firstToRemove, extraScalarFields.end());
 }

@@ -57,6 +57,7 @@ bool IsCheckedIn(const QString &name, const QListWidget &list)
     return false;
 }
 
+// TODO use std::remove_if
 template <typename T, typename Pred> void RemoveFalse(std::vector<T> &vec, Pred predicate)
 {
     auto firstFalse = std::partition(vec.begin(), vec.end(), predicate);
