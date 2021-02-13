@@ -393,7 +393,7 @@ CC_FILE_ERROR LASIOFilter::loadFile(const QString &fileName, ccHObject &containe
     progressDialog.setMethodTitle("Loading LAS points");
     progressDialog.setInfo("Loading points");
     CCCoreLib::NormalizedProgress normProgress(&progressDialog, pointCount);
-    unsigned int numStepsForUpdate = 3 * pointCount / 100;
+    unsigned int numStepsForUpdate = 1 * pointCount / 100;
     unsigned int lastProgressUpdate = 0;
     progressDialog.show();
 
@@ -469,6 +469,7 @@ CC_FILE_ERROR LASIOFilter::loadFile(const QString &fileName, ccHObject &containe
         {
             normProgress.steps(i - lastProgressUpdate);
             lastProgressUpdate += (i - lastProgressUpdate);
+            QApplication::processEvents();
         }
     }
 
