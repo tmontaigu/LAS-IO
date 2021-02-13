@@ -389,7 +389,7 @@ CC_FILE_ERROR LASIOFilter::loadFile(const QString &fileName, ccHObject &containe
     QElapsedTimer timer;
     timer.start();
 
-    ccProgressDialog progressDialog;
+    ccProgressDialog progressDialog(true);
     progressDialog.setMethodTitle("Loading LAS points");
     progressDialog.setInfo("Loading points");
     CCCoreLib::NormalizedProgress normProgress(&progressDialog, pointCount);
@@ -400,6 +400,11 @@ CC_FILE_ERROR LASIOFilter::loadFile(const QString &fileName, ccHObject &containe
     CC_FILE_ERROR error;
     for (unsigned int i{0}; i < pointCount; ++i)
     {
+        if (progressDialog.isCancelRequested())
+        {
+            error = CC_FERR_CANCELED_BY_USER;
+            break;
+        }
 
         if (laszip_read_point(laszipReader))
         {
