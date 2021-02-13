@@ -22,6 +22,7 @@
 #include "LASOpenDialog.h"
 #include "LASSaveDialog.h"
 #include "LasScalarFieldLoader.h"
+#include "LASWaveformLoader.h"
 #include "LasScalarFieldSaver.h"
 
 #include <GenericProgressCallback.h>
@@ -319,8 +320,11 @@ CC_FILE_ERROR LASIOFilter::loadFile(const QString &fileName, ccHObject &containe
         laszip_destroy(laszipReader);
         return CC_FERR_NOT_ENOUGH_MEMORY;
     }
-
     LasScalarFieldLoader loader(availableScalarFields, availableEXtraScalarFields, *pointCloud);
+    std::unique_ptr<LasWaveformLoader> waveformLoader{nullptr};
+    if (HasWaveform(laszipHeader->point_data_format)) {
+        waveformLoader = std::make_unique<LasWaveformLoader>(*laszipHeader, fileName, *pointCloud);
+    }
 
     QElapsedTimer timer;
     timer.start();
@@ -395,6 +399,11 @@ CC_FILE_ERROR LASIOFilter::loadFile(const QString &fileName, ccHObject &containe
             {
                 break;
             }
+        }
+
+        if (waveformLoader)
+        {
+            waveformLoader->loadWaveform(*pointCloud, *laszipPoint);
         }
 
         if ((i - lastProgressUpdate) == numStepsForUpdate == 0)

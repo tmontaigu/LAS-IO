@@ -7,6 +7,7 @@
 
 #include <utility>
 
+
 // TODO take by move
 LasScalarFieldLoader::LasScalarFieldLoader(std::vector<LasScalarField> standardScalarFields,
                                            std::vector<LasExtraScalarField> extraScalarFields,
