@@ -15,13 +15,14 @@
 //#                                                                        #
 //##########################################################################
 
-#include <QString>
 #include <QDate>
+#include <QString>
 
 #include "LASIOFilter.h"
 #include "LASOpenDialog.h"
 #include "LASSaveDialog.h"
 #include "LasScalarFieldLoader.h"
+#include "LASWaveformLoader.h"
 #include "LasScalarFieldSaver.h"
 
 #include <GenericProgressCallback.h>
@@ -206,65 +207,8 @@ InitLaszipHeader(const LASSaveDialog &saveDialog, LasSavedInfo &savedInfo, ccPoi
         laszipHeader.z_offset = bbMin.z;
     }
 
-    unsigned int byteOffset{0};
-    for (LasExtraScalarField &extraScalarField : savedInfo.extraScalarFields)
-    {
-        extraScalarField.byteOffset = byteOffset;
-        byteOffset += extraScalarField.byteSize();
-        if (extraScalarField.numElements() > 1)
-        {
-            // Array fields are split into multiple ccScalarField
-            // and each of them has the index appended to the name
-            char name[50];
-            unsigned int found{0};
-            for (int i = 0; i < extraScalarField.numElements(); ++i)
-            {
-                snprintf(name, 50, "%s [%d]", extraScalarField.name, i);
-                int pos = pointCloud.getScalarFieldIndexByName(name);
-                if (pos >= 0)
-                {
-                    extraScalarField.scalarFields[i] =
-                        dynamic_cast<ccScalarField *>(pointCloud.getScalarField(pos));
-                    found++;
-                    ccLog::Warning("[LAS] field %s found", name);
-                }
-                else
-                {
-                    ccLog::Warning("[LAS] field %s not found", name);
-                    extraScalarField.scalarFields[i] = nullptr;
-                }
-            }
-            if (found != extraScalarField.numElements())
-            {
-                // TODO
-                throw std::runtime_error("Not handled");
-            }
-        }
-        else
-        {
-            const char *nameToSearch;
-            if (!extraScalarField.ccName.empty())
-            {
-                // This field's name clashed with existing ccScalarField when created
-                nameToSearch = extraScalarField.ccName.c_str();
-            }
-            else
-            {
-                nameToSearch = extraScalarField.name;
-            }
-            int pos = pointCloud.getScalarFieldIndexByName(nameToSearch);
-            if (pos >= 0)
-            {
-                extraScalarField.scalarFields[0] =
-                    dynamic_cast<ccScalarField *>(pointCloud.getScalarField(pos));
-            }
-            else
-            {
-                ccLog::Warning("[LAS] field %s not found", nameToSearch);
-            }
-        }
-    }
-
+    LasExtraScalarField::MatchExtraBytesToScalarFields(savedInfo.extraScalarFields, pointCloud);
+    LasExtraScalarField::UpdateByteOffsets(savedInfo.extraScalarFields);
     unsigned int totalExtraByteSize = LasExtraScalarField::TotalExtraBytesSize(savedInfo.extraScalarFields);
     laszipHeader.point_data_record_length += totalExtraByteSize;
     return laszipHeader;
@@ -341,14 +285,8 @@ CC_FILE_ERROR LASIOFilter::loadFile(const QString &fileName, ccHObject &containe
     std::vector<LasScalarField> availableScalarFields =
         LasScalarFieldForPointFormat(laszipHeader->point_data_format);
 
-    std::vector<LasExtraScalarField> availableEXtraScalarFields;
-    auto *extraBytesVlr = std::find_if(laszipHeader->vlrs,
-                                       laszipHeader->vlrs + laszipHeader->number_of_variable_length_records,
-                                       isExtraBytesVlr);
-    if (extraBytesVlr < laszipHeader->vlrs + laszipHeader->number_of_variable_length_records)
-    {
-        availableEXtraScalarFields = LasExtraScalarField::ParseExtraScalarFields(*extraBytesVlr);
-    }
+    std::vector<LasExtraScalarField> availableEXtraScalarFields =
+        LasExtraScalarField::ParseExtraScalarFields(*laszipHeader);
 
     LASOpenDialog dialog;
     dialog.setInfo(laszipHeader->version_minor, laszipHeader->point_data_format, pointCount);
@@ -382,9 +320,11 @@ CC_FILE_ERROR LASIOFilter::loadFile(const QString &fileName, ccHObject &containe
         laszip_destroy(laszipReader);
         return CC_FERR_NOT_ENOUGH_MEMORY;
     }
-
-    ccLog::Print("Extra bytes: %d", availableEXtraScalarFields.size());
-    LasScalarFieldLoader loader(availableScalarFields, availableEXtraScalarFields);
+    LasScalarFieldLoader loader(availableScalarFields, availableEXtraScalarFields, *pointCloud);
+    std::unique_ptr<LasWaveformLoader> waveformLoader{nullptr};
+    if (HasWaveform(laszipHeader->point_data_format)) {
+        waveformLoader = std::make_unique<LasWaveformLoader>(*laszipHeader, fileName, *pointCloud);
+    }
 
     QElapsedTimer timer;
     timer.start();
@@ -465,6 +405,10 @@ CC_FILE_ERROR LASIOFilter::loadFile(const QString &fileName, ccHObject &containe
             }
         }
 
+        if (waveformLoader)
+        {
+            waveformLoader->loadWaveform(*pointCloud, *laszipPoint);
+        }
         if ((i - lastProgressUpdate) == numStepsForUpdate)
         {
             normProgress.steps(i - lastProgressUpdate);
@@ -475,17 +419,23 @@ CC_FILE_ERROR LASIOFilter::loadFile(const QString &fileName, ccHObject &containe
 
     // TODO print ignored scalar field
 
+    for (unsigned int i{0}; i < pointCloud->getNumberOfScalarFields(); ++i)
+    {
+        pointCloud->getScalarField(static_cast<int>(i))->computeMinAndMax();
+    }
+
     if (pointCloud->hasColors())
     {
         pointCloud->showColors(true);
     }
     else if (pointCloud->getNumberOfScalarFields() > 0)
     {
-        for (unsigned int i{0}; i < pointCloud->getNumberOfScalarFields(); ++i)
-        {
-            pointCloud->getScalarField(static_cast<int>(i))->computeMinAndMax();
-        }
         pointCloud->setCurrentDisplayedScalarField(0);
+    }
+
+    for (LasExtraScalarField &extraField : availableEXtraScalarFields)
+    {
+        extraField.resetScalarFieldsPointers();
     }
 
     LasSavedInfo info(*laszipHeader);

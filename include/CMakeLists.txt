@@ -8,6 +8,7 @@ target_sources( ${PROJECT_NAME}
 		${CMAKE_CURRENT_LIST_DIR}/LASSaveDialog.h
 		${CMAKE_CURRENT_LIST_DIR}/LasScalarFieldLoader.h
 		${CMAKE_CURRENT_LIST_DIR}/LasScalarFieldSaver.h
+		${CMAKE_CURRENT_LIST_DIR}/LasWaveformLoader.h
 		)
 
 target_include_directories( ${PROJECT_NAME}

@@ -160,7 +160,7 @@ CCVector3d LASSaveDialog::chosenScale() const
     }
     else if (customRadioButton_2->isChecked())
     {
-        double value =  customScaleDoubleSpinBox_2->value();
+        double value = customScaleDoubleSpinBox_2->value();
         return {value, value, value};
     }
     return {};
