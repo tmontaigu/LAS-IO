@@ -1,7 +1,7 @@
 #ifndef LASSCALARFIELDSAVER_H
 #define LASSCALARFIELDSAVER_H
 
-#include "LASDetails.h"
+#include "LasDetails.h"
 
 #include <vector>
 

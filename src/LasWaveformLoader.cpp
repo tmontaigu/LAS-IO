@@ -1,5 +1,5 @@
 
-#include "LASWaveformLoader.h"
+#include "LasWaveformLoader.h"
 
 bool parseWavepacketDescriptorVlr(const laszip_vlr_struct &vlr, WaveformDescriptor &descriptor)
 {

@@ -20,7 +20,7 @@
 #include "ccIOPluginInterface.h"
 
 
-class LASPlugin : public QObject, public ccIOPluginInterface
+class LasPlugin : public QObject, public ccIOPluginInterface
 {
     Q_OBJECT
     Q_INTERFACES(ccPluginInterface ccIOPluginInterface)
@@ -28,8 +28,8 @@ class LASPlugin : public QObject, public ccIOPluginInterface
     Q_PLUGIN_METADATA(IID "cccorp.cloudcompare.plugin.LASIO" FILE "../info.json")
 
   public:
-    explicit LASPlugin(QObject *parent = nullptr);
-    ~LASPlugin() override = default;
+    explicit LasPlugin(QObject *parent = nullptr);
+    ~LasPlugin() override = default;
 
     // Inherited from ccIOPluginInterface
     ccIOPluginInterface::FilterList getFilters() override;

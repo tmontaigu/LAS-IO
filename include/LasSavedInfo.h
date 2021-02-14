@@ -1,7 +1,7 @@
 #ifndef LASSAVEDINFO_H
 #define LASSAVEDINFO_H
 
-#include "LASDetails.h"
+#include "LasDetails.h"
 
 #include <laszip/laszip_api.h>
 

@@ -15,18 +15,18 @@
 //#                                                                        #
 //##########################################################################
 
-#include "LASPlugin.h"
+#include "LasPlugin.h"
 
-#include "LASIOFilter.h"
+#include "LasIOFilter.h"
 
-LASPlugin::LASPlugin(QObject *parent) : QObject(parent), ccIOPluginInterface(":/CC/plugin/LAS-IO/info.json")
+LasPlugin::LasPlugin(QObject *parent) : QObject(parent), ccIOPluginInterface(":/CC/plugin/LAS-IO/info.json")
 {
 }
 
 
-ccIOPluginInterface::FilterList LASPlugin::getFilters()
+ccIOPluginInterface::FilterList LasPlugin::getFilters()
 {
     return {
-        FileIOFilter::Shared(new LASIOFilter),
+        FileIOFilter::Shared(new LasIOFilter),
     };
 }

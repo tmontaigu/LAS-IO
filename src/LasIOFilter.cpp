@@ -18,13 +18,13 @@
 #include <QDate>
 #include <QString>
 
-#include "LASIOFilter.h"
-#include "LASOpenDialog.h"
-#include "LASSaveDialog.h"
-#include "LasScalarFieldLoader.h"
-#include "LASWaveformLoader.h"
-#include "LasScalarFieldSaver.h"
+#include "LasIOFilter.h"
+#include "LasOpenDialog.h"
+#include "LasSaveDialog.h"
 #include "LasSavedInfo.h"
+#include "LasScalarFieldLoader.h"
+#include "LasScalarFieldSaver.h"
+#include "LasWaveformLoader.h"
 
 #include <GenericProgressCallback.h>
 #include <ccPointCloud.h>
@@ -76,7 +76,7 @@ static CCVector3d GetGlobalShift(FileIOFilter::LoadParameters &parameters,
 }
 
 laszip_header
-InitLaszipHeader(const LASSaveDialog &saveDialog, LasSavedInfo &savedInfo, ccPointCloud &pointCloud)
+InitLaszipHeader(const LasSaveDialog &saveDialog, LasSavedInfo &savedInfo, ccPointCloud &pointCloud)
 {
     laszip_header laszipHeader{};
 
@@ -151,7 +151,7 @@ InitLaszipHeader(const LASSaveDialog &saveDialog, LasSavedInfo &savedInfo, ccPoi
     return laszipHeader;
 }
 
-LASIOFilter::LASIOFilter()
+LasIOFilter::LasIOFilter()
     : FileIOFilter({"LAS IO Filter",
                     DEFAULT_PRIORITY, // priority
                     QStringList{"las", "laz"},
@@ -162,7 +162,7 @@ LASIOFilter::LASIOFilter()
 {
 }
 
-CC_FILE_ERROR LASIOFilter::loadFile(const QString &fileName, ccHObject &container, LoadParameters &parameters)
+CC_FILE_ERROR LasIOFilter::loadFile(const QString &fileName, ccHObject &container, LoadParameters &parameters)
 {
     laszip_POINTER laszipReader{};
     laszip_header *laszipHeader{nullptr};
@@ -225,7 +225,7 @@ CC_FILE_ERROR LASIOFilter::loadFile(const QString &fileName, ccHObject &containe
     std::vector<LasExtraScalarField> availableEXtraScalarFields =
         LasExtraScalarField::ParseExtraScalarFields(*laszipHeader);
 
-    LASOpenDialog dialog;
+    LasOpenDialog dialog;
     dialog.setInfo(laszipHeader->version_minor, laszipHeader->point_data_format, pointCount);
     dialog.setAvailableScalarFields(availableScalarFields, availableEXtraScalarFields);
     dialog.exec();
@@ -394,14 +394,14 @@ CC_FILE_ERROR LASIOFilter::loadFile(const QString &fileName, ccHObject &containe
     return error;
 }
 
-bool LASIOFilter::canSave(CC_CLASS_ENUM type, bool &multiple, bool &exclusive) const
+bool LasIOFilter::canSave(CC_CLASS_ENUM type, bool &multiple, bool &exclusive) const
 {
     multiple = false;
     exclusive = true;
     return type == CC_TYPES::POINT_CLOUD;
 }
 
-CC_FILE_ERROR LASIOFilter::saveToFile(ccHObject *entity,
+CC_FILE_ERROR LasIOFilter::saveToFile(ccHObject *entity,
                                       const QString &filename,
                                       const FileIOFilter::SaveParameters &parameters)
 {
@@ -436,7 +436,7 @@ CC_FILE_ERROR LASIOFilter::saveToFile(ccHObject *entity,
                             1.0e-9 * std::max<double>(diag.y, CCCoreLib::ZERO_TOLERANCE_D),
                             1.0e-9 * std::max<double>(diag.z, CCCoreLib::ZERO_TOLERANCE_D));
 
-    LASSaveDialog saveDialog(pointCloud);
+    LasSaveDialog saveDialog(pointCloud);
     saveDialog.setOptimalScale(optimalScale);
     saveDialog.setSavedScale(CCVector3d(savedInfo.xScale, savedInfo.yScale, savedInfo.zScale));
     saveDialog.setVersionAndPointFormat(QString("1.%1").arg(QString::number(savedInfo.versionMinor)),

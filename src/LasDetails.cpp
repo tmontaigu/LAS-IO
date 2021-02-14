@@ -1,8 +1,4 @@
-//
-// Created by Thomas on 22/11/2020.
-//
-
-#include "LASDetails.h"
+#include "LasDetails.h"
 
 #include <laszip/laszip_api.h>
 
@@ -656,6 +652,7 @@ LasExtraScalarField::Kind LasExtraScalarField::kind() const
     case LasExtraScalarField::f64_3:
         return Floating;
     }
+    return Unsigned;
 }
 
 void LasExtraScalarField::InitExtraBytesVlr(laszip_vlr_struct &vlr,

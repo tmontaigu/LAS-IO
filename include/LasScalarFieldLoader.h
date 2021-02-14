@@ -1,7 +1,7 @@
 #ifndef LASSCALARFIELDLOADER_H
 #define LASSCALARFIELDLOADER_H
 
-#include "LASDetails.h"
+#include "LasDetails.h"
 
 #include <FileIOFilter.h>
 #include <QFileInfo>

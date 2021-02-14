@@ -19,10 +19,10 @@
 
 #include "FileIOFilter.h"
 
-class LASIOFilter : public FileIOFilter
+class LasIOFilter : public FileIOFilter
 {
   public:
-    LASIOFilter();
+    LasIOFilter();
 
     // Inherited from FileIOFilter
     CC_FILE_ERROR

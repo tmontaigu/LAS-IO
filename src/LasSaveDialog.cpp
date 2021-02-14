@@ -1,9 +1,5 @@
-//
-// Created by Thomas on 22/11/2020.
-//
-
-#include "LASSaveDialog.h"
-#include "LASDetails.h"
+#include "LasSaveDialog.h"
+#include "LasDetails.h"
 
 #include <QStringListModel>
 
@@ -11,7 +7,7 @@
 #include <ccPointCloud.h>
 #include <ccScalarField.h>
 
-LASSaveDialog::LASSaveDialog(ccPointCloud *cloud, QWidget *parent)
+LasSaveDialog::LasSaveDialog(ccPointCloud *cloud, QWidget *parent)
     : QDialog(parent), m_cloud(cloud), m_model(new QStringListModel)
 {
     setupUi(this);
@@ -22,12 +18,12 @@ LASSaveDialog::LASSaveDialog(ccPointCloud *cloud, QWidget *parent)
     connect(versionComboBox,
             (void (QComboBox::*)(const QString &))(&QComboBox::currentIndexChanged),
             this,
-            &LASSaveDialog::handleSelectedVersionChange);
+            &LasSaveDialog::handleSelectedVersionChange);
 
     connect(pointFormatComboBox,
             (void (QComboBox::*)(int))(&QComboBox::currentIndexChanged),
             this,
-            &LASSaveDialog::handleSelectedPointFormatChange);
+            &LasSaveDialog::handleSelectedPointFormatChange);
 
     for (const char *versionStr : AvailableVersions)
     {
@@ -45,7 +41,7 @@ LASSaveDialog::LASSaveDialog(ccPointCloud *cloud, QWidget *parent)
     m_model->setStringList(m_cloudScalarFieldsNames);
 }
 
-void LASSaveDialog::handleSelectedVersionChange(const QString &version)
+void LasSaveDialog::handleSelectedVersionChange(const QString &version)
 {
     ccLog::Print("Handle version");
     pointFormatComboBox->clear();
@@ -60,7 +56,7 @@ void LASSaveDialog::handleSelectedVersionChange(const QString &version)
     pointFormatComboBox->setCurrentIndex(0);
 }
 
-void LASSaveDialog::handleSelectedPointFormatChange(int index)
+void LasSaveDialog::handleSelectedPointFormatChange(int index)
 {
     ccLog::Print("Handle fmt change");
     const std::vector<unsigned int> *pointFormats =
@@ -95,7 +91,7 @@ void LASSaveDialog::handleSelectedPointFormatChange(int index)
     }
 }
 
-void LASSaveDialog::setVersionAndPointFormat(const QString &version, unsigned int pointFormat)
+void LasSaveDialog::setVersionAndPointFormat(const QString &version, unsigned int pointFormat)
 {
     int i = versionComboBox->findText(version);
     if (i >= 0)
@@ -111,13 +107,13 @@ void LASSaveDialog::setVersionAndPointFormat(const QString &version, unsigned in
     // TODO when not found
 }
 
-void LASSaveDialog::setOptimalScale(const CCVector3d &optimalScale)
+void LasSaveDialog::setOptimalScale(const CCVector3d &optimalScale)
 {
     bestAccuracyLabel_2->setText(
         QString("(%1, %2, %3)").arg(optimalScale.x).arg(optimalScale.y).arg(optimalScale.z));
 }
 
-void LASSaveDialog::setSavedScale(const CCVector3d &savedScale)
+void LasSaveDialog::setSavedScale(const CCVector3d &savedScale)
 {
     origAccuracyLabel_2->setText(
         QString("(%1, %2, %3)").arg(savedScale.x).arg(savedScale.y).arg(savedScale.z));
@@ -125,17 +121,17 @@ void LASSaveDialog::setSavedScale(const CCVector3d &savedScale)
     origRadioButton_2->setChecked(true);
 }
 
-unsigned int LASSaveDialog::selectedPointFormat() const
+unsigned int LasSaveDialog::selectedPointFormat() const
 {
     return pointFormatComboBox->currentText().toUInt();
 }
 
-unsigned int LASSaveDialog::selectedVersionMinor() const
+unsigned int LasSaveDialog::selectedVersionMinor() const
 {
     return versionComboBox->currentText().splitRef('.').at(1).toUInt();
 }
 
-CCVector3d LASSaveDialog::chosenScale() const
+CCVector3d LasSaveDialog::chosenScale() const
 {
     const auto vectorFromString = [](const QString &string) -> CCVector3d {
         QVector<QStringRef> splits = string.splitRef(',');
@@ -166,7 +162,7 @@ CCVector3d LASSaveDialog::chosenScale() const
     return {};
 }
 
-std::vector<LasScalarField> LASSaveDialog::fieldsToSave() const
+std::vector<LasScalarField> LasSaveDialog::fieldsToSave() const
 {
     std::vector<LasScalarField> fields;
     fields.reserve(scalarFieldFormLayout->rowCount());

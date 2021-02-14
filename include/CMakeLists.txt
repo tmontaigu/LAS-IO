@@ -1,11 +1,11 @@
 
 target_sources( ${PROJECT_NAME}
     PRIVATE
-		${CMAKE_CURRENT_LIST_DIR}/LASPlugin.h
-		${CMAKE_CURRENT_LIST_DIR}/LASIOFilter.h
-		${CMAKE_CURRENT_LIST_DIR}/LASDetails.h
-		${CMAKE_CURRENT_LIST_DIR}/LASOpenDialog.h
-		${CMAKE_CURRENT_LIST_DIR}/LASSaveDialog.h
+		${CMAKE_CURRENT_LIST_DIR}/LasPlugin.h
+		${CMAKE_CURRENT_LIST_DIR}/LasIOFilter.h
+		${CMAKE_CURRENT_LIST_DIR}/LasDetails.h
+		${CMAKE_CURRENT_LIST_DIR}/LasOpenDialog.h
+		${CMAKE_CURRENT_LIST_DIR}/LasSaveDialog.h
 		${CMAKE_CURRENT_LIST_DIR}/LasScalarFieldLoader.h
 		${CMAKE_CURRENT_LIST_DIR}/LasScalarFieldSaver.h
 		${CMAKE_CURRENT_LIST_DIR}/LasWaveformLoader.h

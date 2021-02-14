@@ -15,7 +15,7 @@
 //#                                                                        #
 //##########################################################################
 
-#include "LASOpenDialog.h"
+#include "LasOpenDialog.h"
 
 static QListWidgetItem *CreateItem(const char *name)
 {
@@ -68,7 +68,7 @@ template <typename T, typename Pred> void RemoveFalse(std::vector<T> &vec, Pred 
     }
 }
 
-LASOpenDialog::LASOpenDialog(QWidget *parent) : QDialog(parent)
+LasOpenDialog::LasOpenDialog(QWidget *parent) : QDialog(parent)
 {
     setupUi(this);
 
@@ -77,14 +77,14 @@ LASOpenDialog::LASOpenDialog(QWidget *parent) : QDialog(parent)
     connect(cancelButton, &QPushButton::clicked, this, &QDialog::reject);
 }
 
-void LASOpenDialog::setInfo(int versionMinor, int pointFormatId, int64_t numPoints)
+void LasOpenDialog::setInfo(int versionMinor, int pointFormatId, int64_t numPoints)
 {
     versionLabelValue->setText(QString("1.%1").arg(QString::number(versionMinor)));
     pointFormatLabelValue->setText(QString::number(pointFormatId));
     numPointsLabelValue->setText(PrettyFormatNumber(numPoints));
 }
 
-void LASOpenDialog::setAvailableScalarFields(const std::vector<LasScalarField> &scalarFields,
+void LasOpenDialog::setAvailableScalarFields(const std::vector<LasScalarField> &scalarFields,
                                              const std::vector<LasExtraScalarField> &extraScalarFields)
 {
     for (const LasScalarField &lasScalarField : scalarFields)
@@ -103,7 +103,7 @@ void LASOpenDialog::setAvailableScalarFields(const std::vector<LasScalarField> &
     availableExtraScalarFields->setMaximumHeight(size);
 }
 
-void LASOpenDialog::filterOutNotChecked(std::vector<LasScalarField> &scalarFields,
+void LasOpenDialog::filterOutNotChecked(std::vector<LasScalarField> &scalarFields,
                                         std::vector<LasExtraScalarField> &extraScalarFields)
 {
     const auto isFieldSelected = [this](const auto &field) { return isChecked(field); };
@@ -112,12 +112,12 @@ void LASOpenDialog::filterOutNotChecked(std::vector<LasScalarField> &scalarField
     RemoveFalse(extraScalarFields, isFieldSelected);
 }
 
-bool LASOpenDialog::isChecked(const LasExtraScalarField &lasExtraScalarField) const
+bool LasOpenDialog::isChecked(const LasExtraScalarField &lasExtraScalarField) const
 {
     return IsCheckedIn(lasExtraScalarField.name, *availableExtraScalarFields);
 }
 
-bool LASOpenDialog::isChecked(const LasScalarField &lasScalarField) const
+bool LasOpenDialog::isChecked(const LasScalarField &lasScalarField) const
 {
     return IsCheckedIn(lasScalarField.name, *availableScalarFields);
 }

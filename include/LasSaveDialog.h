@@ -9,19 +9,19 @@
 
 #include <CCGeom.h>
 
-#include "LASDetails.h"
+#include "LasDetails.h"
 #include "ui_lassavedialog.h"
 
 class QStringListModel;
 class ccScalarField;
 class ccPointCloud;
 
-class LASSaveDialog : public QDialog, public Ui::LASSaveDialog
+class LasSaveDialog : public QDialog, public Ui::LASSaveDialog
 {
     Q_OBJECT
 
   public:
-    explicit LASSaveDialog(ccPointCloud *cloud, QWidget *parent = nullptr);
+    explicit LasSaveDialog(ccPointCloud *cloud, QWidget *parent = nullptr);
 
     void setVersionAndPointFormat(const QString &version, unsigned int pointFormat);
     void setOptimalScale(const CCVector3d &optimalScale);
