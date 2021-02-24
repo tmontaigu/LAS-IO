@@ -44,7 +44,6 @@ LasSaveDialog::LasSaveDialog(ccPointCloud *cloud, QWidget *parent)
 
 void LasSaveDialog::handleSelectedVersionChange(const QString &version)
 {
-    ccLog::Print("Handle version");
     pointFormatComboBox->clear();
     const std::vector<unsigned int> *pointFormats = PointFormatsAvailableForVersion(qPrintable(version));
     if (pointFormats)
@@ -105,7 +104,6 @@ void LasSaveDialog::setVersionAndPointFormat(const QString &version, unsigned in
             pointFormatComboBox->setCurrentIndex(j);
         }
     }
-    // TODO when not found
 }
 
 void LasSaveDialog::setOptimalScale(const CCVector3d &optimalScale)

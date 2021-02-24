@@ -484,6 +484,7 @@ unsigned int LasExtraScalarField::elementSize() const
     Q_ASSERT_X(false, "elementSize", "Unhandled data type");
     return 0;
 }
+
 unsigned int LasExtraScalarField::byteSize() const
 {
     return elementSize() * numElements();

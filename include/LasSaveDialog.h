@@ -1,7 +1,3 @@
-//
-// Created by Thomas on 22/11/2020.
-//
-
 #ifndef LASSAVEDIALOG_H
 #define LASSAVEDIALOG_H
 

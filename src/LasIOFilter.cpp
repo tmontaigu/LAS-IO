@@ -271,7 +271,7 @@ CC_FILE_ERROR LasIOFilter::loadFile(const QString &fileName, ccHObject &containe
     CCCoreLib::NormalizedProgress normProgress(&progressDialog, pointCount);
     unsigned int numStepsForUpdate = 1 * pointCount / 100;
     unsigned int lastProgressUpdate = 0;
-    progressDialog.show();
+    progressDialog.start();
 
     CC_FILE_ERROR error;
     for (unsigned int i{0}; i < pointCount; ++i)
@@ -352,8 +352,7 @@ CC_FILE_ERROR LasIOFilter::loadFile(const QString &fileName, ccHObject &containe
             QApplication::processEvents();
         }
     }
-
-    // TODO print ignored scalar field
+    progressDialog.setLabelText("Finishing");
 
     for (unsigned int i{0}; i < pointCloud->getNumberOfScalarFields(); ++i)
     {
