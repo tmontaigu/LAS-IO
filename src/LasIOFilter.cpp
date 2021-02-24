@@ -15,8 +15,6 @@
 //#                                                                        #
 //##########################################################################
 
-#include <QDate>
-#include <QString>
 
 #include "LasIOFilter.h"
 #include "LasOpenDialog.h"
@@ -31,8 +29,9 @@
 #include <ccProgressDialog.h>
 #include <ccScalarField.h>
 
-#include <QtCore/QElapsedTimer>
-#include <QtCore/QFileInfo>
+#include <QDate>
+#include <QElapsedTimer>
+#include <QFileInfo>
 
 #include <laszip/laszip_api.h>
 
@@ -390,7 +389,13 @@ CC_FILE_ERROR LasIOFilter::loadFile(const QString &fileName, ccHObject &containe
         laszip_destroy(laszipReader);
     }
 
-    ccLog::Print(QString("[LAS] File loaded in %1 seconds").arg(timer.elapsed()));
+    timer.elapsed();
+    qint64 elapsed = timer.elapsed();
+    int32_t minutes = timer.elapsed() / (1000 * 60);
+    elapsed -= minutes * (1000 * 60);
+    int32_t seconds = elapsed / 1000;
+    elapsed -= seconds * 1000;
+    ccLog::Print(QString("[LAS] File loaded in %1m%2s%3ms").arg(minutes).arg(seconds).arg(elapsed));
     return error;
 }
 
