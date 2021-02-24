@@ -34,10 +34,13 @@ LasSavedInfo::LasSavedInfo(const LasSavedInfo &rhs)
 
     strncpy(guidData4, rhs.guidData4, 8);
     strncpy(systemIdentifier, rhs.systemIdentifier, 32);
-    vlrs = new laszip_vlr_struct[numVlrs];
-    std::copy(rhs.vlrs, rhs.vlrs + rhs.numVlrs, vlrs);
+    if (numVlrs > 0)
+    {
+        vlrs = new laszip_vlr_struct[numVlrs];
+        std::copy(rhs.vlrs, rhs.vlrs + rhs.numVlrs, vlrs);
+    }
 }
-LasSavedInfo::~LasSavedInfo()
+LasSavedInfo::~LasSavedInfo() noexcept
 {
     delete[] vlrs;
 }
