@@ -31,6 +31,7 @@ LasSaveDialog::LasSaveDialog(ccPointCloud *cloud, QWidget *parent)
     }
     versionComboBox->setCurrentIndex(0);
 
+    m_cloudScalarFieldsNames << QString();
     for (unsigned int i = 0; i < m_cloud->getNumberOfScalarFields(); ++i)
     {
         if (strcmp(m_cloud->getScalarFieldName(i), "Default") != 0)
