@@ -1,4 +1,4 @@
-option( PLUGIN_EXAMPLE_IO "LAS IO plugin using laszip" OFF )
+option( PLUGIN_LAS_IO "LAS IO plugin using laszip" OFF )
 
 if( PLUGIN_LAS_IO )
 	project( LASIO )

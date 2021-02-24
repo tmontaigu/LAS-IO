@@ -1,23 +1,23 @@
 {
 	"type" : "I/O",
-	"name" : "Example (I/O Plugin)",
-	"description": "This plugin is an example of how to add I/O for a new file format. It counts the number of occurenecs of the string 'foo' in a text file.",
+	"name" : "LAS (I/O Plugin)",
+	"description": "Plugin to provide read and write support for LAS/LAZ files using laszip",
 	"authors" : [
 		{
-			"name" : "Andy Maloney",
-			"email" : "asmaloney@gmail.com"
+			"name" : "Thomas Montaigu",
+			"email" : "thomas.montaigu@laposte.net"
 		}
 	],
 	"maintainers" : [
 		{
-			"name" : "Andy Maloney",
-			"email" : "asmaloney@gmail.com"
+			"name": "Thomas Montaigu",
+			"email": "thomas.montaigu@laposte.net"
 		}
 	],
 	"references" : [
 		{
-			"text" : "FOO format",
-			"url" : "https://en.wikipedia.org/wiki/Foobar"
+			"text": "Specifications",
+			"url": "https://www.asprs.org/divisions-committees/lidar-division/laser-las-file-format-exchange-activities"
 		}
 	]
 }
