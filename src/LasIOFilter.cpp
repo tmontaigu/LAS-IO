@@ -420,13 +420,16 @@ CC_FILE_ERROR LasIOFilter::saveToFile(ccHObject *entity,
     }
     auto *pointCloud = static_cast<ccPointCloud *>(entity);
 
+    LasSaveDialog saveDialog(pointCloud);
+    LasSavedInfo savedInfo;
     if (!pointCloud->hasMetaData(LAS_METADATA_INFO_KEY))
     {
-        ccLog::Warning("Cannot save cloud not loaded from las file");
-        return CC_FERR_NOT_IMPLEMENTED;
+        savedInfo.pointFormat = 3;
+        savedInfo.versionMinor = 2;
+    } else {
+        savedInfo = qvariant_cast<LasSavedInfo>(pointCloud->getMetaData(LAS_METADATA_INFO_KEY));
+        saveDialog.setSavedScale(CCVector3d(savedInfo.xScale, savedInfo.yScale, savedInfo.zScale));
     }
-
-    auto savedInfo = qvariant_cast<LasSavedInfo>(pointCloud->getMetaData(LAS_METADATA_INFO_KEY));
 
     // optimal scale (for accuracy) --> 1e-9 because the maximum integer is roughly +/-2e+9
     CCVector3d bbMax;
@@ -440,9 +443,7 @@ CC_FILE_ERROR LasIOFilter::saveToFile(ccHObject *entity,
                             1.0e-9 * std::max<double>(diag.y, CCCoreLib::ZERO_TOLERANCE_D),
                             1.0e-9 * std::max<double>(diag.z, CCCoreLib::ZERO_TOLERANCE_D));
 
-    LasSaveDialog saveDialog(pointCloud);
     saveDialog.setOptimalScale(optimalScale);
-    saveDialog.setSavedScale(CCVector3d(savedInfo.xScale, savedInfo.yScale, savedInfo.zScale));
     saveDialog.setVersionAndPointFormat(QString("1.%1").arg(QString::number(savedInfo.versionMinor)),
                                         savedInfo.pointFormat);
 
