@@ -175,7 +175,7 @@ void LasWaveformLoader::loadWaveform(ccPointCloud &pointCloud, const laszip_poin
     stream.setByteOrder(QDataStream::ByteOrder::LittleEndian);
 
     uint8_t descriptorIndex;
-    uint64_t byteOffset;
+    quint64 byteOffset;
     uint32_t byteCount;
     float returnPointLocation;
     float x_t, y_t, z_t;

@@ -19,7 +19,7 @@ if (WIN32)
         HINTS "${LASZIP_INCLUDE_DIR}/../bin"
     )
 else()
-    set(LASZIP_DLL "Dummy Value")
+    set(LASZIP_DLL "Dummy Value so that handle args does not fail")
 endif()
 
 message(DEBUG "LASZIP_LIBRARY: ${LASZIP_LIBRARY}")

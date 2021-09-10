@@ -1,6 +1,7 @@
 #include "LasSavedInfo.h"
 
 #include <algorithm>
+#include <cstring>
 
 LasSavedInfo::LasSavedInfo(const laszip_header &header)
     : fileSourceId(header.file_source_ID), guidData1(header.project_ID_GUID_data_1),

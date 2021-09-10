@@ -779,11 +779,15 @@ void LasExtraScalarField::MatchExtraBytesToScalarFields(vector<LasExtraScalarFie
 EvlrHeader::EvlrHeader(QDataStream& stream) {
     stream.setByteOrder(QDataStream::ByteOrder::LittleEndian);
     uint16_t reserved;
+    quint64 recordLength_;
 
     stream >> reserved;
     stream.readRawData(userID, EvlrHeader::USER_ID_SIZE);
-    stream >> recordID >> recordLength;
+    stream >> recordID;
+    stream >> recordLength_;
     stream.readRawData(description, EvlrHeader::DESCRIPTION_SIZE);
+
+    recordLength = recordLength_;
 };
 
 bool EvlrHeader::isWaveFormDataPackets() const

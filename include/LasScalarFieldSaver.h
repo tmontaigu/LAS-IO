@@ -4,6 +4,7 @@
 #include "LasDetails.h"
 
 #include <vector>
+#include <limits>
 
 class ccPointCloud;
 struct laszip_point;
