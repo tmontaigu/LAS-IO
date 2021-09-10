@@ -15,7 +15,6 @@
 //#                                                                        #
 //##########################################################################
 
-
 #include "LasIOFilter.h"
 #include "LasOpenDialog.h"
 #include "LasSaveDialog.h"
@@ -259,7 +258,8 @@ CC_FILE_ERROR LasIOFilter::loadFile(const QString &fileName, ccHObject &containe
 
     LasScalarFieldLoader loader(availableScalarFields, availableEXtraScalarFields, *pointCloud);
     std::unique_ptr<LasWaveformLoader> waveformLoader{nullptr};
-    if (HasWaveform(laszipHeader->point_data_format)) {
+    if (HasWaveform(laszipHeader->point_data_format))
+    {
         waveformLoader = std::make_unique<LasWaveformLoader>(*laszipHeader, fileName, *pointCloud);
     }
 
@@ -428,7 +428,9 @@ CC_FILE_ERROR LasIOFilter::saveToFile(ccHObject *entity,
     {
         savedInfo.pointFormat = 3;
         savedInfo.versionMinor = 2;
-    } else {
+    }
+    else
+    {
         savedInfo = qvariant_cast<LasSavedInfo>(pointCloud->getMetaData(LAS_METADATA_INFO_KEY));
         saveDialog.setSavedScale(CCVector3d(savedInfo.xScale, savedInfo.yScale, savedInfo.zScale));
     }

@@ -774,3 +774,19 @@ void LasExtraScalarField::MatchExtraBytesToScalarFields(vector<LasExtraScalarFie
         std::remove_if(extraScalarFields.begin(), extraScalarFields.end(), notAllScalarFieldWereFound);
     extraScalarFields.erase(firstToRemove, extraScalarFields.end());
 }
+
+
+EvlrHeader::EvlrHeader(QDataStream& stream) {
+    stream.setByteOrder(QDataStream::ByteOrder::LittleEndian);
+    uint16_t reserved;
+
+    stream >> reserved;
+    stream.readRawData(userID, EvlrHeader::USER_ID_SIZE);
+    stream >> recordID >> recordLength;
+    stream.readRawData(description, EvlrHeader::DESCRIPTION_SIZE);
+};
+
+bool EvlrHeader::isWaveFormDataPackets() const
+{
+    return recordID == 65'535 && strncmp(userID, "LASF_Spec", EvlrHeader::USER_ID_SIZE);
+}

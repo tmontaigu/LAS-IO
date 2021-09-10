@@ -23,6 +23,7 @@ struct LasWaveformLoader
     unsigned int fwfDataCount{0};
     unsigned int fwfDataOffset{0};
     bool isPointFormatExtended{false};
+    ccPointCloud::FWFDescriptorSet descriptors;
 };
 
 #endif // LASWAVEFORMLOADER_H

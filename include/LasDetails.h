@@ -226,4 +226,19 @@ struct LasExtraScalarField
 };
 
 
+struct EvlrHeader {
+    static constexpr size_t SIZE = 60;
+    static constexpr size_t USER_ID_SIZE = 16;
+    static constexpr size_t DESCRIPTION_SIZE = 32;
+
+    char userID[USER_ID_SIZE];
+    uint16_t recordID;
+    uint64_t recordLength;
+    char description[DESCRIPTION_SIZE];
+
+    explicit EvlrHeader(QDataStream& stream);
+
+    bool isWaveFormDataPackets() const;
+};
+
 #endif // LASDETAILS_H
