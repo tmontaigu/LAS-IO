@@ -6,22 +6,15 @@ if( PLUGIN_LAS_IO )
     AddPlugin( NAME ${PROJECT_NAME} TYPE io )
 
     list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+    find_package(LASzip MODULE REQUIRED)
 
     target_compile_definitions(${PROJECT_NAME} PRIVATE -DQT_FORCE_ASSERTS)
 
-    find_package(LASzip REQUIRED)
+    target_link_libraries(LASIO LASzip::LASzip)
 
-    message("LOL ${LASZIP_INCLUDE_DIR}")
-    message("LOL ${LASZIP_LIBRARIES}")
-
-    target_link_libraries(LASIO ${LASZIP_LIBRARIES})
-    target_include_directories(LASIO PRIVATE ${LASZIP_INCLUDE_DIR})
-    
     add_subdirectory( include )
     add_subdirectory( src )
     add_subdirectory( ui )
 
-    # TODO install LASZIPLIBRARIES
-
-
+    install(FILES ${LASZIP_DLL} DESTINATION ${CLOUDCOMPARE_DEST_FOLDER})
 endif()
