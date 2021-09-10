@@ -135,9 +135,9 @@ InitLaszipHeader(const LasSaveDialog &saveDialog, LasSavedInfo &savedInfo, ccPoi
     }
     else
     {
-        CCVector3d bbMax;
-        CCVector3d bbMin;
-        pointCloud.getGlobalBB(bbMin, bbMax);
+        CCVector3 bbMax;
+        CCVector3 bbMin;
+        pointCloud.getBoundingBox(bbMin, bbMax);
         laszipHeader.x_offset = bbMin.x;
         laszipHeader.y_offset = bbMin.y;
         laszipHeader.z_offset = bbMin.z;
@@ -254,8 +254,9 @@ CC_FILE_ERROR LasIOFilter::loadFile(const QString &fileName, ccHObject &containe
         laszip_close_reader(laszipReader);
         laszip_clean(laszipReader);
         laszip_destroy(laszipReader);
-        return CC_FERR_NOT_ENOUGH_MEMORY;
+        return CC_FERR_THIRD_PARTY_LIB_FAILURE;
     }
+
     LasScalarFieldLoader loader(availableScalarFields, availableEXtraScalarFields, *pointCloud);
     std::unique_ptr<LasWaveformLoader> waveformLoader{nullptr};
     if (HasWaveform(laszipHeader->point_data_format)) {
@@ -306,7 +307,7 @@ CC_FILE_ERROR LasIOFilter::loadFile(const QString &fileName, ccHObject &containe
 
             if (shift.norm2() != 0.0)
             {
-                ccLog::Warning("[LAS] Cloud has been recentered! Translation: (%.2f ; %.2f ; %.2f)",
+                ccLog::Warning("[LAS] Cloud has been re-centered! Translation: (%.2f ; %.2f ; %.2f)",
                                shift.x,
                                shift.y,
                                shift.z);
@@ -345,6 +346,7 @@ CC_FILE_ERROR LasIOFilter::loadFile(const QString &fileName, ccHObject &containe
         {
             waveformLoader->loadWaveform(*pointCloud, *laszipPoint);
         }
+
         if ((i - lastProgressUpdate) == numStepsForUpdate)
         {
             normProgress.steps(i - lastProgressUpdate);
@@ -432,12 +434,9 @@ CC_FILE_ERROR LasIOFilter::saveToFile(ccHObject *entity,
     }
 
     // optimal scale (for accuracy) --> 1e-9 because the maximum integer is roughly +/-2e+9
-    CCVector3d bbMax;
-    CCVector3d bbMin;
-    if (!pointCloud->getGlobalBB(bbMin, bbMax))
-    {
-        return CC_FERR_NO_SAVE;
-    }
+    CCVector3 bbMax;
+    CCVector3 bbMin;
+    pointCloud->getBoundingBox(bbMin, bbMax);
     CCVector3d diag = bbMax - bbMin;
     CCVector3d optimalScale(1.0e-9 * std::max<double>(diag.x, CCCoreLib::ZERO_TOLERANCE_D),
                             1.0e-9 * std::max<double>(diag.y, CCCoreLib::ZERO_TOLERANCE_D),
