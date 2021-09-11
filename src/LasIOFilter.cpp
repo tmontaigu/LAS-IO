@@ -426,8 +426,9 @@ CC_FILE_ERROR LasIOFilter::saveToFile(ccHObject *entity,
     LasSavedInfo savedInfo;
     if (!pointCloud->hasMetaData(LAS_METADATA_INFO_KEY))
     {
-        savedInfo.pointFormat = 3;
-        savedInfo.versionMinor = 2;
+        LasVersion v = SelectBestVersion(*pointCloud);
+        savedInfo.pointFormat = v.pointFormat;
+        savedInfo.versionMinor = v.minorVersion;
     }
     else
     {

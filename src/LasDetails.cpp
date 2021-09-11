@@ -322,9 +322,11 @@ bool isExtraBytesVlr(const laszip_vlr_struct &vlr)
 
 unsigned int SizeOfVlrs(const laszip_vlr_struct *vlrs, unsigned int numVlrs)
 {
-    return std::accumulate(vlrs, vlrs + numVlrs, 0, [](laszip_U32 size, const laszip_vlr_struct &vlr) {
-        return vlr.record_length_after_header + LAS_VLR_HEADER_SIZE + size;
-    });
+    return std::accumulate(vlrs,
+                           vlrs + numVlrs,
+                           0,
+                           [](laszip_U32 size, const laszip_vlr_struct &vlr)
+                           { return vlr.record_length_after_header + LAS_VLR_HEADER_SIZE + size; });
 }
 
 LasExtraScalarField::LasExtraScalarField(QDataStream &dataStream)
@@ -684,11 +686,11 @@ uint8_t LasExtraScalarField::typeCode() const
 unsigned int
 LasExtraScalarField::TotalExtraBytesSize(const std::vector<LasExtraScalarField> &extraScalarFields)
 {
-    return std::accumulate(
-        extraScalarFields.begin(),
-        extraScalarFields.end(),
-        0,
-        [](unsigned int sum, const LasExtraScalarField &field) { return sum + field.byteSize(); });
+    return std::accumulate(extraScalarFields.begin(),
+                           extraScalarFields.end(),
+                           0,
+                           [](unsigned int sum, const LasExtraScalarField &field)
+                           { return sum + field.byteSize(); });
 }
 
 void LasExtraScalarField::resetScalarFieldsPointers()
@@ -763,7 +765,8 @@ void LasExtraScalarField::MatchExtraBytesToScalarFields(vector<LasExtraScalarFie
     }
     // Remove any Extra Scalar Field for which we could not get _all_ the corresponding
     // ccScalarField
-    const auto notAllScalarFieldWereFound = [](const LasExtraScalarField &extraScalarField) {
+    const auto notAllScalarFieldWereFound = [](const LasExtraScalarField &extraScalarField)
+    {
         const auto ptrIsNull = [](const ccScalarField *ptr) { return ptr == nullptr; };
         return std::any_of(extraScalarField.scalarFields,
                            extraScalarField.scalarFields + extraScalarField.numElements(),
@@ -775,8 +778,8 @@ void LasExtraScalarField::MatchExtraBytesToScalarFields(vector<LasExtraScalarFie
     extraScalarFields.erase(firstToRemove, extraScalarFields.end());
 }
 
-
-EvlrHeader::EvlrHeader(QDataStream& stream) {
+EvlrHeader::EvlrHeader(QDataStream &stream)
+{
     stream.setByteOrder(QDataStream::ByteOrder::LittleEndian);
     uint16_t reserved;
     quint64 recordLength_;
@@ -793,4 +796,84 @@ EvlrHeader::EvlrHeader(QDataStream& stream) {
 bool EvlrHeader::isWaveFormDataPackets() const
 {
     return recordID == 65'535 && strncmp(userID, "LASF_Spec", EvlrHeader::USER_ID_SIZE);
+}
+
+LasVersion SelectBestVersion(const ccPointCloud &cloud)
+{
+    bool is_extended_required{false};
+    // TODO Waveform
+
+    // These are exclusive to 'extended' point formats (>= 6)
+    bool hasOverlapFlag = cloud.getScalarFieldIndexByName(LasNames::OverlapFlag) != -1;
+    bool hasNIR = cloud.getScalarFieldIndexByName(LasNames::NearInfrared) != -1;
+    bool hasScannerChannel = cloud.getScalarFieldIndexByName(LasNames::ScannerChannel) != -1;
+    bool hasScanAngle = cloud.getScalarFieldIndexByName(LasNames::ScanAngle) != -1;
+
+    is_extended_required = hasOverlapFlag || hasNIR || hasScannerChannel || hasScanAngle;
+
+    if (!is_extended_required)
+    {
+        // TODO: create dn ,use loop and break on first true
+        // We may need extended point format because some fields need to store more value
+        // than what is possible on non-extended point format.
+        int classificationIdx = cloud.getScalarFieldIndexByName(LasNames::Classification);
+        if (classificationIdx != -1)
+        {
+            const CCCoreLib::ScalarField *classification = cloud.getScalarField(classificationIdx);
+            if (classification->getMax() > std::pow(5, 2))
+            {
+                is_extended_required = true;
+            }
+        }
+
+        int returnNumberIdx = cloud.getScalarFieldIndexByName(LasNames::ReturnNumber);
+        if (returnNumberIdx != -1)
+        {
+            const CCCoreLib::ScalarField *returnNumber = cloud.getScalarField(returnNumberIdx);
+            if (returnNumber->getMax() > std::pow(4, 2))
+            {
+                is_extended_required = true;
+            }
+        }
+
+        int numReturnsIdx = cloud.getScalarFieldIndexByName(LasNames::NumberOfReturns);
+        if (numReturnsIdx != -1)
+        {
+            const CCCoreLib::ScalarField *numReturns = cloud.getScalarField(numReturnsIdx);
+            if (numReturns->getMax() > std::pow(4, 2))
+            {
+                is_extended_required = true;
+            }
+        }
+    }
+
+    bool hasRGB = cloud.hasColors();
+
+    if (is_extended_required)
+    {
+        int pointFormat = 6;
+        if (hasRGB && hasNIR)
+        {
+            pointFormat = 8;
+        }
+        else if (hasRGB && !hasNIR)
+        {
+            pointFormat = 7;
+        }
+        return {pointFormat, 4};
+    }
+    else
+    {
+        bool hasGpsTime = cloud.getScalarFieldIndexByName(LasNames::GpsTime) != -1;
+        int pointFormat = 0;
+        if (hasGpsTime)
+        {
+            pointFormat += 1;
+        }
+        if (hasRGB)
+        {
+            pointFormat += 2;
+        }
+        return {pointFormat, 2};
+    }
 }
