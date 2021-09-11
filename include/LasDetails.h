@@ -241,11 +241,14 @@ struct EvlrHeader {
     bool isWaveFormDataPackets() const;
 };
 
-struct LasVersion {
+struct LasVersion
+{
     int pointFormat = 3;
     int minorVersion = 2;
 };
 
-LasVersion SelectBestVersion(const ccPointCloud& cloud);
+LasVersion SelectBestVersion(const ccPointCloud &cloud);
+
+void clone_vlr_into(const laszip_vlr_struct &src, laszip_vlr_struct &dst);
 
 #endif // LASDETAILS_H

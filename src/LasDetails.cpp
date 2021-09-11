@@ -877,3 +877,10 @@ LasVersion SelectBestVersion(const ccPointCloud &cloud)
         return {pointFormat, 2};
     }
 }
+
+void clone_vlr_into(const laszip_vlr_struct &src, laszip_vlr_struct &dst)
+{
+    dst = src;
+    dst.data = new laszip_U8[src.record_length_after_header];
+    std::copy(src.data, src.data + src.record_length_after_header, dst.data);
+}

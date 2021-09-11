@@ -1,5 +1,6 @@
 #include "LasSavedInfo.h"
 
+#include <QtGlobal>
 #include <algorithm>
 #include <cstring>
 
@@ -11,9 +12,8 @@ LasSavedInfo::LasSavedInfo(const laszip_header &header)
 {
     strncpy(guidData4, header.project_ID_GUID_data_4, 8);
     strncpy(systemIdentifier, header.system_identifier, 32);
-    const auto vlrShouldBeCopied = [](const laszip_vlr_struct &vlr) {
-        return !isLaszipVlr(vlr) && !isExtraBytesVlr(vlr);
-    };
+    const auto vlrShouldBeCopied = [](const laszip_vlr_struct &vlr)
+    { return !isLaszipVlr(vlr) && !isExtraBytesVlr(vlr); };
 
     numVlrs =
         std::count_if(header.vlrs, header.vlrs + header.number_of_variable_length_records, vlrShouldBeCopied);
@@ -21,9 +21,22 @@ LasSavedInfo::LasSavedInfo(const laszip_header &header)
     if (numVlrs > 0)
     {
         vlrs = new laszip_vlr_struct[numVlrs];
-        std::copy_if(
-            header.vlrs, header.vlrs + header.number_of_variable_length_records, vlrs, vlrShouldBeCopied);
+        laszip_U32 j{0};
+        for (laszip_U32 i{0}; i < header.number_of_variable_length_records; ++i)
+        {
+            if (vlrShouldBeCopied(header.vlrs[i]))
+            {
+                clone_vlr_into(header.vlrs[i], vlrs[j]);
+                j++;
+            }
+        }
     }
+}
+
+LasSavedInfo &LasSavedInfo::operator=(LasSavedInfo rhs)
+{
+    swap(*this, rhs);
+    return *this;
 }
 
 LasSavedInfo::LasSavedInfo(const LasSavedInfo &rhs)
@@ -38,10 +51,32 @@ LasSavedInfo::LasSavedInfo(const LasSavedInfo &rhs)
     if (numVlrs > 0)
     {
         vlrs = new laszip_vlr_struct[numVlrs];
-        std::copy(rhs.vlrs, rhs.vlrs + rhs.numVlrs, vlrs);
+        for (laszip_U32 i{0}; i < numVlrs; ++i)
+        {
+            clone_vlr_into(rhs.vlrs[i], vlrs[i]);
+        }
     }
 }
+
 LasSavedInfo::~LasSavedInfo() noexcept
 {
     delete[] vlrs;
+}
+
+void swap(LasSavedInfo &lhs, LasSavedInfo &rhs) noexcept
+{
+    std::swap(lhs.fileSourceId, rhs.fileSourceId);
+    std::swap(lhs.guidData1, rhs.guidData1);
+    std::swap(lhs.guidData2, rhs.guidData2);
+    std::swap(lhs.guidData3, rhs.guidData3);
+    std::swap<laszip_CHAR, LasSavedInfo::GUID_DATA_4_SIZE>(lhs.guidData4, rhs.guidData4);
+    std::swap(lhs.versionMinor, rhs.versionMinor);
+    std::swap(lhs.pointFormat, rhs.pointFormat);
+    std::swap<laszip_CHAR, LasSavedInfo::SYSTEM_IDENTIFIER_SIZE>(lhs.systemIdentifier, rhs.systemIdentifier);
+    std::swap(lhs.xScale, rhs.xScale);
+    std::swap(lhs.yScale, rhs.yScale);
+    std::swap(lhs.zScale, rhs.zScale);
+    std::swap(lhs.numVlrs, rhs.numVlrs);
+    std::swap(lhs.vlrs, rhs.vlrs);
+    std::swap(lhs.extraScalarFields, rhs.extraScalarFields);
 }

@@ -42,12 +42,14 @@ LasSaveDialog::LasSaveDialog(ccPointCloud *cloud, QWidget *parent)
     m_model->setStringList(m_cloudScalarFieldsNames);
 }
 
+/// When the selected version changes, we need to update the combo box
+/// of point format to match the ones supported by the version
 void LasSaveDialog::handleSelectedVersionChange(const QString &version)
 {
-    pointFormatComboBox->clear();
     const std::vector<unsigned int> *pointFormats = PointFormatsAvailableForVersion(qPrintable(version));
     if (pointFormats)
     {
+        pointFormatComboBox->clear();
         for (unsigned int fmt : *pointFormats)
         {
             pointFormatComboBox->addItem(QString::number(fmt));
@@ -56,9 +58,11 @@ void LasSaveDialog::handleSelectedVersionChange(const QString &version)
     pointFormatComboBox->setCurrentIndex(0);
 }
 
+/// When the user changes the point format, we need to redo the
+/// scalar field form.
 void LasSaveDialog::handleSelectedPointFormatChange(int index)
 {
-    ccLog::Print("Handle fmt change");
+
     const std::vector<unsigned int> *pointFormats =
         PointFormatsAvailableForVersion(qPrintable(versionComboBox->currentText()));
     if (!pointFormats)
