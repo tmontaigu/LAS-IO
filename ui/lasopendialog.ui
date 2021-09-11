@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>417</width>
-    <height>559</height>
+    <width>435</width>
+    <height>688</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -115,17 +115,31 @@
         <property name="frameShadow">
          <enum>QFrame::Raised</enum>
         </property>
-        <layout class="QVBoxLayout" name="verticalLayout_2">
+        <layout class="QVBoxLayout" name="verticalLayout_5">
          <item>
           <widget class="QSplitter" name="splitter">
            <property name="orientation">
             <enum>Qt::Vertical</enum>
            </property>
-           <widget class="QListWidget" name="availableScalarFields"/>
-           <widget class="QListWidget" name="availableExtraScalarFields">
-            <property name="enabled">
-             <bool>false</bool>
+           <widget class="QGroupBox" name="groupBox_2">
+            <property name="title">
+             <string>Standard Fields</string>
             </property>
+            <layout class="QVBoxLayout" name="verticalLayout_2">
+             <item>
+              <widget class="QListWidget" name="availableScalarFields"/>
+             </item>
+            </layout>
+           </widget>
+           <widget class="QGroupBox" name="groupBox">
+            <property name="title">
+             <string>Extra Fields</string>
+            </property>
+            <layout class="QVBoxLayout" name="verticalLayout_4">
+             <item>
+              <widget class="QListWidget" name="availableExtraScalarFields"/>
+             </item>
+            </layout>
            </widget>
           </widget>
          </item>
