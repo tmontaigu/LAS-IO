@@ -3,7 +3,7 @@
 #include "LasDetails.h"
 #include "LasWaveformLoader.h"
 
-bool parseWavepacketDescriptorVlr(const laszip_vlr_struct &vlr, WaveformDescriptor &descriptor)
+static bool parseWavepacketDescriptorVlr(const laszip_vlr_struct &vlr, WaveformDescriptor &descriptor)
 {
     if (vlr.record_length_after_header < 26)
     {
@@ -28,8 +28,8 @@ bool parseWavepacketDescriptorVlr(const laszip_vlr_struct &vlr, WaveformDescript
     return true;
 }
 
-ccPointCloud::FWFDescriptorSet
-parseWaveformDescriptorVlrs(const laszip_vlr_struct *vlrs, unsigned int numVlrs, ccPointCloud &pointCloud)
+static ccPointCloud::FWFDescriptorSet parseWaveformDescriptorVlrs(const laszip_vlr_struct *vlrs,
+                                                                  unsigned int numVlrs)
 {
     ccPointCloud::FWFDescriptorSet descriptors;
 
@@ -57,9 +57,9 @@ LasWaveformLoader::LasWaveformLoader(const laszip_header_struct &laszipHeader,
                                      ccPointCloud &pointCloud)
     : isPointFormatExtended(laszipHeader.point_data_format >= 6)
 {
-    descriptors = parseWaveformDescriptorVlrs(
-        laszipHeader.vlrs, laszipHeader.number_of_variable_length_records, pointCloud);
-    ccLog::Print("[LAS] %d Waveform Packet Descriptor VLRs found", pointCloud.fwfDescriptors().size());
+    descriptors =
+        parseWaveformDescriptorVlrs(laszipHeader.vlrs, laszipHeader.number_of_variable_length_records);
+    ccLog::Print("[LAS] %d Waveform Packet Descriptor VLRs found", descriptors.size());
 
     QFile fwfDataSource;
     if (laszipHeader.start_of_waveform_data_packet_record != 0)
@@ -80,7 +80,8 @@ LasWaveformLoader::LasWaveformLoader(const laszip_header_struct &laszipHeader,
         }
 
         QDataStream stream(&fwfDataSource);
-        EvlrHeader evlrHeader(stream);
+        EvlrHeader evlrHeader;
+        stream >> evlrHeader;
         if (stream.status() == QDataStream::Status::ReadPastEnd)
         {
 
@@ -120,7 +121,8 @@ LasWaveformLoader::LasWaveformLoader(const laszip_header_struct &laszipHeader,
         if (fwfDataCount > EvlrHeader::SIZE)
         {
             QDataStream stream(&fwfDataSource);
-            EvlrHeader evlrHeader(stream);
+            EvlrHeader evlrHeader;
+            stream >> evlrHeader;
 
             if (evlrHeader.isWaveFormDataPackets())
             {
@@ -190,6 +192,18 @@ void LasWaveformLoader::loadWaveform(ccPointCloud &pointCloud, const laszip_poin
     {
         ccLog::Warning("[LAS] No valid descriptor vlr for index %d", descriptorIndex);
         return;
+    }
+
+    if (byteOffset < fwfDataOffset)
+    {
+        ccLog::Warning("[LAS] Waveform byte offset is smaller that fwfDataOffset");
+        byteOffset = fwfDataOffset;
+    }
+
+    if (byteOffset + byteCount > fwfDataCount)
+    {
+        ccLog::Warning("[LAS] Waveform byte count for point %u is bigger than actual fwf data", pointCloud.size() - 1);
+        byteCount = (fwfDataCount - byteOffset);
     }
 
     ccWaveform &w = pointCloud.waveforms()[pointCloud.size() - 1];

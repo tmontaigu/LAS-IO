@@ -22,6 +22,7 @@
 #include "LasScalarFieldLoader.h"
 #include "LasScalarFieldSaver.h"
 #include "LasWaveformLoader.h"
+#include "LasWaveformSaver.h"
 
 #include <GenericProgressCallback.h>
 #include <ccPointCloud.h>
@@ -34,11 +35,11 @@
 
 #include <laszip/laszip_api.h>
 
+#include <memory>
 #include <numeric>
 #include <utility>
 
 const char *LAS_METADATA_INFO_KEY = "LAS.savedInfo";
-
 
 static CCVector3d GetGlobalShift(FileIOFilter::LoadParameters &parameters,
                                  bool &preserveCoordinateShift,
@@ -81,10 +82,16 @@ InitLaszipHeader(const LasSaveDialog &saveDialog, LasSavedInfo &savedInfo, ccPoi
     laszipHeader.file_creation_year = currentDate.year();
     laszipHeader.file_creation_day = currentDate.dayOfYear();
 
-    // TODO global encoding
     laszipHeader.version_major = 1;
     laszipHeader.version_minor = saveDialog.selectedVersionMinor();
     laszipHeader.point_data_format = saveDialog.selectedPointFormat();
+
+    // TODO global encoding wkt and other
+    if (HasWaveform(laszipHeader.point_data_format) && pointCloud.hasFWF())
+    {
+        // We always store FWF externally
+        laszipHeader.global_encoding |= 0b0000'0100;
+    }
 
     laszipHeader.header_size = HeaderSize(laszipHeader.version_minor);
     laszipHeader.offset_to_point_data = laszipHeader.header_size;
@@ -117,7 +124,7 @@ InitLaszipHeader(const LasSaveDialog &saveDialog, LasSavedInfo &savedInfo, ccPoi
         laszipHeader.vlrs = new laszip_vlr_struct[laszipHeader.number_of_variable_length_records];
         for (laszip_U32 i{0}; i < savedInfo.numVlrs; i++)
         {
-            clone_vlr_into(savedInfo.vlrs[i], laszipHeader.vlrs[i]);
+            cloneVlrInto(savedInfo.vlrs[i], laszipHeader.vlrs[i]);
         }
 
         LasExtraScalarField::InitExtraBytesVlr(
@@ -215,8 +222,9 @@ CC_FILE_ERROR LasIOFilter::loadFile(const QString &fileName, ccHObject &containe
 
     if (pointCount >= std::numeric_limits<unsigned int>::max())
     {
-        // TODO handle when pointcount >= u32::max
-        abort();
+        // TODO
+        ccLog::Error("Files with more that %lud points are not supported", pointCount);
+        return CC_FERR_NOT_IMPLEMENTED;
     }
 
     std::vector<LasScalarField> availableScalarFields =
@@ -461,6 +469,11 @@ CC_FILE_ERROR LasIOFilter::saveToFile(ccHObject *entity,
 
     std::vector<LasScalarField> fieldsToSave = saveDialog.fieldsToSave();
     LasScalarFieldSaver fieldSaver(fieldsToSave, savedInfo.extraScalarFields);
+    std::unique_ptr<LasWaveformSaver> waveformSaver{nullptr};
+    if (HasWaveform(laszipHeader.point_data_format) && pointCloud->hasFWF())
+    {
+        waveformSaver = std::make_unique<LasWaveformSaver>(*pointCloud);
+    }
 
     laszip_POINTER laszipWriter{nullptr};
     laszip_CHAR *errorMsg{nullptr};
@@ -501,6 +514,11 @@ CC_FILE_ERROR LasIOFilter::saveToFile(ccHObject *entity,
     {
         fieldSaver.handleScalarFields(i, laszipPoint);
         fieldSaver.handleExtraFields(i, laszipPoint);
+
+        if (waveformSaver)
+        {
+            waveformSaver->handlePoint(i, laszipPoint);
+        }
 
         const CCVector3 *point = pointCloud->getPoint(i);
         if (pointCloud->isShifted())
@@ -543,6 +561,30 @@ CC_FILE_ERROR LasIOFilter::saveToFile(ccHObject *entity,
     {
         laszip_get_error(laszipWriter, &errorMsg);
         ccLog::Warning("[LAS] laszip error :'%s'", errorMsg);
+    }
+
+    if (HasWaveform(laszipHeader.point_data_format) && pointCloud->hasFWF())
+    {
+        const ccPointCloud::SharedFWFDataContainer &fwfData = pointCloud->fwfData();
+        QFileInfo info(filename);
+        QString wdpFilename = QString("%1/%2.wdp").arg(info.path(), info.baseName());
+        QFile fwfFile(wdpFilename);
+
+        if (!fwfFile.open(QIODevice::WriteOnly))
+        {
+            ccLog::Error("[LAS] Failed to write waveform data");
+            error = CC_FERR_WRITING;
+        }
+        else
+        {
+            {
+                EvlrHeader header = EvlrHeader::Waveform();
+                QDataStream stream(&fwfFile);
+                stream << header;
+            }
+            fwfFile.write(reinterpret_cast<const char *>(fwfData->data()), fwfData->size());
+            ccLog::Print(QString("[LAS] Successfully saved FWF in external file '$1'").arg(wdpFilename));
+        }
     }
 
     laszip_close_writer(laszipWriter);

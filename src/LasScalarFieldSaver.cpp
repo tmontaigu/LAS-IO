@@ -151,8 +151,9 @@ void LasScalarFieldSaver::handleExtraFields(size_t i, laszip_point &point)
         ccLog::Print(
             "max : %d offset %d", extraField.byteSize() + extraField.byteOffset, extraField.byteOffset);
 
-        Q_ASSERT(extraField.byteOffset < point.num_extra_bytes);
-        Q_ASSERT(extraField.byteOffset + extraField.byteSize() <= point.num_extra_bytes);
+        Q_ASSERT(extraField.byteOffset < static_cast<unsigned int>(point.num_extra_bytes));
+        Q_ASSERT(extraField.byteOffset + extraField.byteSize() <=
+                 static_cast<unsigned int>(point.num_extra_bytes));
         switch (extraField.type)
         {
         case LasExtraScalarField::u8_3:

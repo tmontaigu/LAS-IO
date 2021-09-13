@@ -23,7 +23,6 @@ LasPlugin::LasPlugin(QObject *parent) : QObject(parent), ccIOPluginInterface(":/
 {
 }
 
-
 ccIOPluginInterface::FilterList LasPlugin::getFilters()
 {
     return {

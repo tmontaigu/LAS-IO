@@ -11,7 +11,6 @@
 #include <ccPointCloud.h>
 #include <laszip/laszip_api.h>
 
-
 class LasScalarFieldLoader
 {
   public:

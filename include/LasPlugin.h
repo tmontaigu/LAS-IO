@@ -19,7 +19,6 @@
 
 #include "ccIOPluginInterface.h"
 
-
 class LasPlugin : public QObject, public ccIOPluginInterface
 {
     Q_OBJECT

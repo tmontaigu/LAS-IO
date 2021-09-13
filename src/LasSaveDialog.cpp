@@ -16,12 +16,12 @@ LasSaveDialog::LasSaveDialog(ccPointCloud *cloud, QWidget *parent)
     bestRadioButton_2->setChecked(true);
 
     connect(versionComboBox,
-            (void (QComboBox::*)(const QString &))(&QComboBox::currentIndexChanged),
+            (void(QComboBox::*)(const QString &))(&QComboBox::currentIndexChanged),
             this,
             &LasSaveDialog::handleSelectedVersionChange);
 
     connect(pointFormatComboBox,
-            (void (QComboBox::*)(int))(&QComboBox::currentIndexChanged),
+            (void(QComboBox::*)(int))(&QComboBox::currentIndexChanged),
             this,
             &LasSaveDialog::handleSelectedPointFormatChange);
 
@@ -136,7 +136,8 @@ unsigned int LasSaveDialog::selectedVersionMinor() const
 
 CCVector3d LasSaveDialog::chosenScale() const
 {
-    const auto vectorFromString = [](const QString &string) -> CCVector3d {
+    const auto vectorFromString = [](const QString &string) -> CCVector3d
+    {
         QVector<QStringRef> splits = string.splitRef(',');
         if (splits.size() == 3)
         {

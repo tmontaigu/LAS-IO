@@ -21,6 +21,11 @@ typedef laszip_vlr laszip_vlr_struct;
 #define LAS_VLR_HEADER_SIZE 54
 #define SCAN_ANGLE_SCALE 0.06
 
+/// This namespace regroups constants for all the names we use
+/// in CloudCompare ScalarField system for the standard dimensions defined by the LAS Spec.
+///
+/// Notice that RGB and Waveforms are missing, that is normal as they
+/// are not treated as scalar fields within CloudCompare.
 namespace LasNames
 {
 constexpr const char *Intensity = "Intensity";
@@ -44,8 +49,13 @@ constexpr const char *OverlapFlag = "Overlap Flag";
 constexpr const char *NearInfrared = "Near Infrared";
 } // namespace LasNames
 
+/// class used to link a LAS field defined by the standard to the CloudCompare
+/// scalar field that stores or will store the values.
 struct LasScalarField
 {
+    /// Enum used to uniquely identify LAS fields
+    /// with a clear distinction between 'normal' and 'extended' fields
+    /// which may have the same name (e.g. Classification)
     enum Id
     {
         Intensity = 0,
@@ -82,49 +92,35 @@ struct LasScalarField
     static LasScalarField::Id IdFromName(const char *name, unsigned int targetPointFormat);
 
     const char *name;
+    /// The Id of the LAS field this relates to.
     Id id;
+    /// Pointer to the 'linked' CloudCompare scalar field.
+    ///
+    /// When reading (loading points) values of the LAS field will be stored into the
+    /// scalar field pointed by sf.
+    ///
+    /// When writing (saving points) values of the scalar field pointed by sf will
+    /// be stored to the corresponding LAS field (using the Id).
     ccScalarField *sf{nullptr};
 };
 
-uint16_t PointFormatSize(unsigned int pointFormat);
-
-uint16_t HeaderSize(unsigned int versionMinor);
-
-inline bool HasGpsTime(unsigned int pointFormatId)
-{
-    return pointFormatId == 1 || pointFormatId == 3 || pointFormatId == 5 || pointFormatId >= 6;
-}
-
-inline bool HasRGB(unsigned int pointFormatId)
-{
-    return pointFormatId == 2 || pointFormatId == 3 || pointFormatId == 4 || pointFormatId == 5 ||
-           pointFormatId >= 7;
-}
-
-inline bool HasWaveform(unsigned int pointFormatId)
-{
-    return pointFormatId == 4 || pointFormatId == 5 || pointFormatId >= 8;
-}
-
-inline bool HasNearInfrared(unsigned int pointFormatId)
-{
-    return pointFormatId == 8 || pointFormatId == 10;
-}
-
-extern const char *AvailableVersions[3];
-
+/// Returns point the formats available for the given version.
+///
+/// If the version does not exists or is not supported a nullptr is returned.
+///
+/// \param version version string, must be "major.minor" e.g. "1.2"
 const std::vector<unsigned int> *PointFormatsAvailableForVersion(const char *version);
 
+// TODO makes this a static ?
 std::vector<LasScalarField> LasScalarFieldForPointFormat(unsigned int pointFormatId);
 
-unsigned int SizeOfVlrs(const laszip_vlr_struct *vlrs, unsigned int numVlrs);
+/// Array containing the available versions
+extern const char *AvailableVersions[3];
 
-bool isLaszipVlr(const laszip_vlr_struct &);
-
-bool isExtraBytesVlr(const laszip_vlr_struct &);
-
+/// This serves the same purpose as LasScalarField but for extra bytes
 struct LasExtraScalarField
 {
+    /// Data types available LAS Extra Field
     enum DataType
     {
         Undocumented = 0,
@@ -190,6 +186,7 @@ struct LasExtraScalarField
     unsigned int numElements() const;
     unsigned int byteSize() const;
     Kind kind() const;
+    const char *typeName() const;
 
     // Properties we can derive from the type options attribute
     bool noDataIsRelevant() const;
@@ -203,7 +200,7 @@ struct LasExtraScalarField
     static DataType DataTypeFromValue(uint8_t value);
 
   public: // Data members
-    // These info are from the vlr itself
+    // These fields are from the vlr itself
     DataType type{Undocumented};
     uint8_t options{};
     char name[32] = "";
@@ -225,8 +222,50 @@ struct LasExtraScalarField
     std::string ccName{};
 };
 
+/// Returns the size for the given point format id
+///
+/// Returns a size of 0 if the point format does not exists or is not handled
+///
+/// \param pointFormat the point format
+/// \return
+uint16_t PointFormatSize(unsigned int pointFormat);
 
-struct EvlrHeader {
+/// Returns the header size for the given minor version of the standard used
+uint16_t HeaderSize(unsigned int versionMinor);
+
+/// Returns whether the point format supports Gps Time
+inline bool HasGpsTime(unsigned int pointFormatId)
+{
+    return pointFormatId == 1 || pointFormatId == 3 || pointFormatId == 5 || pointFormatId >= 6;
+}
+
+/// Returns whether the point format supports RGB
+inline bool HasRGB(unsigned int pointFormatId)
+{
+    return pointFormatId == 2 || pointFormatId == 3 || pointFormatId == 4 || pointFormatId == 5 ||
+           pointFormatId >= 7;
+}
+
+/// Returns whether the point format supports Waveforms
+inline bool HasWaveform(unsigned int pointFormatId)
+{
+    return pointFormatId == 4 || pointFormatId == 5 || pointFormatId >= 8;
+}
+
+/// Returns whether the point format support Near Infrared
+inline bool HasNearInfrared(unsigned int pointFormatId)
+{
+    return pointFormatId == 8 || pointFormatId == 10;
+}
+
+unsigned int SizeOfVlrs(const laszip_vlr_struct *vlrs, unsigned int numVlrs);
+
+bool isLaszipVlr(const laszip_vlr_struct &);
+
+bool isExtraBytesVlr(const laszip_vlr_struct &);
+
+struct EvlrHeader
+{
     static constexpr size_t SIZE = 60;
     static constexpr size_t USER_ID_SIZE = 16;
     static constexpr size_t DESCRIPTION_SIZE = 32;
@@ -236,9 +275,14 @@ struct EvlrHeader {
     uint64_t recordLength;
     char description[DESCRIPTION_SIZE];
 
-    explicit EvlrHeader(QDataStream& stream);
+    EvlrHeader() = default;
+
+    static EvlrHeader Waveform();
 
     bool isWaveFormDataPackets() const;
+
+    friend QDataStream &operator>>(QDataStream &stream, EvlrHeader &hdr);
+    friend QDataStream &operator<<(QDataStream &stream, const EvlrHeader &hdr);
 };
 
 struct LasVersion
@@ -249,6 +293,6 @@ struct LasVersion
 
 LasVersion SelectBestVersion(const ccPointCloud &cloud);
 
-void clone_vlr_into(const laszip_vlr_struct &src, laszip_vlr_struct &dst);
+void cloneVlrInto(const laszip_vlr_struct &src, laszip_vlr_struct &dst);
 
 #endif // LASDETAILS_H

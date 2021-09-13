@@ -26,7 +26,7 @@ LasSavedInfo::LasSavedInfo(const laszip_header &header)
         {
             if (vlrShouldBeCopied(header.vlrs[i]))
             {
-                clone_vlr_into(header.vlrs[i], vlrs[j]);
+                cloneVlrInto(header.vlrs[i], vlrs[j]);
                 j++;
             }
         }
@@ -53,7 +53,7 @@ LasSavedInfo::LasSavedInfo(const LasSavedInfo &rhs)
         vlrs = new laszip_vlr_struct[numVlrs];
         for (laszip_U32 i{0}; i < numVlrs; ++i)
         {
-            clone_vlr_into(rhs.vlrs[i], vlrs[i]);
+            cloneVlrInto(rhs.vlrs[i], vlrs[i]);
         }
     }
 }

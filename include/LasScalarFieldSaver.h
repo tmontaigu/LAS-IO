@@ -3,8 +3,8 @@
 
 #include "LasDetails.h"
 
-#include <vector>
 #include <limits>
+#include <vector>
 
 class ccPointCloud;
 struct laszip_point;

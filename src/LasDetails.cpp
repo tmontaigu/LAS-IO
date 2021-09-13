@@ -58,13 +58,22 @@ uint16_t PointFormatSize(unsigned int pointFormat)
         return 26;
     case 3:
         return 34;
+    case 4:
+        return 28 + 29;
+    case 5:
+        return 34 + 29;
     case 6:
         return 30;
     case 7:
         return 36;
     case 8:
         return 38;
+    case 9:
+        return 30 + 29;
+    case 10:
+        return 38 + 29;
     default:
+        Q_ASSERT(false);
         return 0;
     }
 }
@@ -536,6 +545,7 @@ unsigned int LasExtraScalarField::numElements() const
         return 0;
     }
     Q_ASSERT_X(false, "numElements", "Unhandled data type");
+    return 0;
 }
 
 std::vector<LasExtraScalarField>
@@ -569,21 +579,21 @@ LasExtraScalarField::ParseExtraScalarFields(const laszip_vlr_struct &extraBytesV
     for (int j{0}; j < numExtraFields; ++j)
     {
         LasExtraScalarField ebInfo(dataStream);
+        ebInfo.byteOffset = byteOffset;
 
         if (ebInfo.type != DataType::Undocumented && ebInfo.type != ebInfo.DataType::Invalid)
         {
             info.push_back(ebInfo);
-            info.back().byteOffset = byteOffset;
         }
         else
         {
-            ccLog::Warning("Undocumented or invalid Extra Bytes are not supporrted");
+            ccLog::Warning("Undocumented or invalid Extra Bytes are not supported");
         }
 
         byteOffset += ebInfo.byteSize();
-        ccLog::Print("Extra: %s -> %d, size %d offset %d",
+        ccLog::Print("[LAS] Extra Bytes: Name: '%s', Type: %s -> Size %d, Offset %d",
                      ebInfo.name,
-                     ebInfo.type,
+                     ebInfo.typeName(),
                      ebInfo.byteSize(),
                      ebInfo.byteOffset);
     }
@@ -683,6 +693,78 @@ uint8_t LasExtraScalarField::typeCode() const
     return static_cast<uint8_t>(type);
 }
 
+const char *LasExtraScalarField::typeName() const
+{
+    switch (type)
+    {
+    case Undocumented:
+        return "Undocumented";
+    case u8:
+        return "u8";
+    case u16:
+        return "u16";
+    case u32:
+        return "u32";
+    case u64:
+        return "u64";
+    case i8:
+        return "i8";
+    case i16:
+        return "i16";
+    case i32:
+        return "i32";
+    case i64:
+        return "i64";
+    case f32:
+        return "f32";
+    case f64:
+        return "f64";
+    case u8_2:
+        return "u8[2]";
+    case u16_2:
+        return "u16[2]";
+    case u32_2:
+        return "u32[2]";
+    case u64_2:
+        return "u64[2]";
+    case i8_2:
+        return "i8[2]";
+    case i16_2:
+        return "i16[2]";
+    case i32_2:
+        return "i32[2]";
+    case i64_2:
+        return "i64[2]";
+    case f32_2:
+        return "f32[2]";
+    case f64_2:
+        return "f64[2]";
+    case u8_3:
+        return "u8[3]";
+    case u16_3:
+        return "u16[3]";
+    case u32_3:
+        return "u32[3]";
+    case u64_3:
+        return "u64[3]";
+    case i8_3:
+        return "i8[3]";
+    case i16_3:
+        return "i16[3]";
+    case i32_3:
+        return "i32[3]";
+    case i64_3:
+        return "i64[3]";
+    case f32_3:
+        return "f32[3]";
+    case f64_3:
+        return "f64[3]";
+    case Invalid:
+        return "Invalid";
+    }
+    return "";
+}
+
 unsigned int
 LasExtraScalarField::TotalExtraBytesSize(const std::vector<LasExtraScalarField> &extraScalarFields)
 {
@@ -778,40 +860,63 @@ void LasExtraScalarField::MatchExtraBytesToScalarFields(vector<LasExtraScalarFie
     extraScalarFields.erase(firstToRemove, extraScalarFields.end());
 }
 
-EvlrHeader::EvlrHeader(QDataStream &stream)
-{
-    stream.setByteOrder(QDataStream::ByteOrder::LittleEndian);
-    uint16_t reserved;
-    quint64 recordLength_;
-
-    stream >> reserved;
-    stream.readRawData(userID, EvlrHeader::USER_ID_SIZE);
-    stream >> recordID;
-    stream >> recordLength_;
-    stream.readRawData(description, EvlrHeader::DESCRIPTION_SIZE);
-
-    recordLength = recordLength_;
-};
-
 bool EvlrHeader::isWaveFormDataPackets() const
 {
-    return recordID == 65'535 && strncmp(userID, "LASF_Spec", EvlrHeader::USER_ID_SIZE);
+    return recordID == 65'535 && strncmp(userID, "LASF_Spec", EvlrHeader::USER_ID_SIZE) == 0;
+}
+
+EvlrHeader EvlrHeader::Waveform()
+{
+    EvlrHeader self;
+    self.recordID = 65'535;
+    strncpy(self.userID, "LASF_Spec", EvlrHeader::USER_ID_SIZE);
+    strncpy(self.description, "Waveform Data Packets", EvlrHeader::DESCRIPTION_SIZE);
+    self.recordLength = 0;
+    return self;
+}
+
+QDataStream &operator>>(QDataStream &stream, EvlrHeader &hdr)
+{
+    stream.setByteOrder(QDataStream::ByteOrder::LittleEndian);
+
+    uint16_t reserved;
+    stream >> reserved;
+    stream.readRawData(hdr.userID, EvlrHeader::USER_ID_SIZE);
+    stream >> hdr.recordID;
+    quint64 recordLength_;
+    stream >> recordLength_;
+    hdr.recordLength = recordLength_;
+    stream.readRawData(hdr.description, EvlrHeader::DESCRIPTION_SIZE);
+
+    return stream;
+};
+
+QDataStream &operator<<(QDataStream &stream, const EvlrHeader &hdr)
+{
+    uint16_t reserved{0};
+    stream.setByteOrder(QDataStream::ByteOrder::LittleEndian);
+
+    stream << reserved;
+    stream.writeRawData(hdr.userID, EvlrHeader::USER_ID_SIZE);
+    stream << hdr.recordID;
+    stream << (quint64)hdr.recordLength;
+    stream.writeRawData(hdr.description, EvlrHeader::DESCRIPTION_SIZE);
+
+    return stream;
 }
 
 LasVersion SelectBestVersion(const ccPointCloud &cloud)
 {
-    bool is_extended_required{false};
-    // TODO Waveform
-
+    bool isExtendedRequired{false};
     // These are exclusive to 'extended' point formats (>= 6)
     bool hasOverlapFlag = cloud.getScalarFieldIndexByName(LasNames::OverlapFlag) != -1;
     bool hasNIR = cloud.getScalarFieldIndexByName(LasNames::NearInfrared) != -1;
     bool hasScannerChannel = cloud.getScalarFieldIndexByName(LasNames::ScannerChannel) != -1;
     bool hasScanAngle = cloud.getScalarFieldIndexByName(LasNames::ScanAngle) != -1;
 
-    is_extended_required = hasOverlapFlag || hasNIR || hasScannerChannel || hasScanAngle;
+    isExtendedRequired = hasOverlapFlag || hasNIR || hasScannerChannel || hasScanAngle;
 
-    if (!is_extended_required)
+    if (!isExtendedRequired)
     {
         // TODO: create dn ,use loop and break on first true
         // We may need extended point format because some fields need to store more value
@@ -822,7 +927,7 @@ LasVersion SelectBestVersion(const ccPointCloud &cloud)
             const CCCoreLib::ScalarField *classification = cloud.getScalarField(classificationIdx);
             if (classification->getMax() > std::pow(5, 2))
             {
-                is_extended_required = true;
+                isExtendedRequired = true;
             }
         }
 
@@ -832,7 +937,7 @@ LasVersion SelectBestVersion(const ccPointCloud &cloud)
             const CCCoreLib::ScalarField *returnNumber = cloud.getScalarField(returnNumberIdx);
             if (returnNumber->getMax() > std::pow(4, 2))
             {
-                is_extended_required = true;
+                isExtendedRequired = true;
             }
         }
 
@@ -842,23 +947,38 @@ LasVersion SelectBestVersion(const ccPointCloud &cloud)
             const CCCoreLib::ScalarField *numReturns = cloud.getScalarField(numReturnsIdx);
             if (numReturns->getMax() > std::pow(4, 2))
             {
-                is_extended_required = true;
+                isExtendedRequired = true;
             }
         }
     }
 
     bool hasRGB = cloud.hasColors();
+    bool hasWaveform = cloud.hasFWF();
 
-    if (is_extended_required)
+    if (isExtendedRequired)
     {
         int pointFormat = 6;
-        if (hasRGB && hasNIR)
+        if (hasWaveform)
         {
-            pointFormat = 8;
+            if (hasRGB)
+            {
+                pointFormat = 10;
+            }
+            else
+            {
+                pointFormat = 9;
+            }
         }
-        else if (hasRGB && !hasNIR)
+        else
         {
-            pointFormat = 7;
+            if (hasRGB && hasNIR)
+            {
+                pointFormat = 8;
+            }
+            else if (hasRGB && !hasNIR)
+            {
+                pointFormat = 7;
+            }
         }
         return {pointFormat, 4};
     }
@@ -866,19 +986,33 @@ LasVersion SelectBestVersion(const ccPointCloud &cloud)
     {
         bool hasGpsTime = cloud.getScalarFieldIndexByName(LasNames::GpsTime) != -1;
         int pointFormat = 0;
-        if (hasGpsTime)
+        if (hasWaveform)
         {
-            pointFormat += 1;
+            if (hasGpsTime)
+            {
+                pointFormat = 4;
+            }
+            else if (hasRGB)
+            {
+                pointFormat = 5;
+            }
         }
-        if (hasRGB)
+        else
         {
-            pointFormat += 2;
+            if (hasGpsTime)
+            {
+                pointFormat += 1;
+            }
+            if (hasRGB)
+            {
+                pointFormat += 2;
+            }
         }
         return {pointFormat, 2};
     }
 }
 
-void clone_vlr_into(const laszip_vlr_struct &src, laszip_vlr_struct &dst)
+void cloneVlrInto(const laszip_vlr_struct &src, laszip_vlr_struct &dst)
 {
     dst = src;
     dst.data = new laszip_U8[src.record_length_after_header];

@@ -20,8 +20,8 @@ struct LasSavedInfo
     explicit LasSavedInfo(const laszip_header &header);
 
     LasSavedInfo(const LasSavedInfo &rhs);
-    LasSavedInfo& operator=(LasSavedInfo rhs);
-    friend void swap(LasSavedInfo& lhs, LasSavedInfo& rhs) noexcept;
+    LasSavedInfo &operator=(LasSavedInfo rhs);
+    friend void swap(LasSavedInfo &lhs, LasSavedInfo &rhs) noexcept;
 
     virtual ~LasSavedInfo() noexcept;
 

@@ -1,15 +1,12 @@
 #ifndef LASWAVEFORMLOADER_H
 #define LASWAVEFORMLOADER_H
 
-#include <QString>
 #include <QFileInfo>
+#include <QString>
 
 #include <ccPointCloud.h>
 
 #include <laszip/laszip_api.h>
-
-
-bool parseWavepacketDescriptorVlr(const laszip_vlr_struct &vlr, WaveformDescriptor &descriptor);
 
 struct LasWaveformLoader
 {

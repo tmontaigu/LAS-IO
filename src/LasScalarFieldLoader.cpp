@@ -7,7 +7,6 @@
 
 #include <utility>
 
-
 // TODO take by move
 LasScalarFieldLoader::LasScalarFieldLoader(std::vector<LasScalarField> standardScalarFields,
                                            std::vector<LasExtraScalarField> extraScalarFields,
@@ -139,7 +138,11 @@ CC_FILE_ERROR LasScalarFieldLoader::handleExtraScalarFields(ccPointCloud &pointC
 
     for (const LasExtraScalarField &extraField : m_extraScalarFields)
     {
-        Q_ASSERT(extraField.byteOffset + extraField.byteSize() <= currentPoint.num_extra_bytes);
+        if (extraField.byteOffset + extraField.byteSize() > static_cast<unsigned int>(currentPoint.num_extra_bytes))
+        {
+            Q_ASSERT(false);
+            return CC_FERR_READING;
+        }
 
         laszip_U8 *dataStart = currentPoint.extra_bytes + extraField.byteOffset;
         parseRawValues(extraField, dataStart);
