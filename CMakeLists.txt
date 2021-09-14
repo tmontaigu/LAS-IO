@@ -18,5 +18,5 @@ if (PLUGIN_LAS_IO)
 
     if (WIN32)
         install(FILES ${LASZIP_DLL} DESTINATION ${CLOUDCOMPARE_DEST_FOLDER})
-    endif()
+    endif ()
 endif ()

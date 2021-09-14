@@ -1,3 +1,20 @@
+//##########################################################################
+//#                                                                        #
+//#                CLOUDCOMPARE PLUGIN: LAS-IO Plugin                      #
+//#                                                                        #
+//#  This program is free software; you can redistribute it and/or modify  #
+//#  it under the terms of the GNU General Public License as published by  #
+//#  the Free Software Foundation; version 2 of the License.               #
+//#                                                                        #
+//#  This program is distributed in the hope that it will be useful,       #
+//#  but WITHOUT ANY WARRANTY; without even the implied warranty of        #
+//#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         #
+//#  GNU General Public License for more details.                          #
+//#                                                                        #
+//#                   COPYRIGHT: Thomas Montaigu                           #
+//#                                                                        #
+//##########################################################################
+
 #include "LasScalarFieldSaver.h"
 
 #include <laszip/laszip_api.h>
@@ -14,130 +31,134 @@ void LasScalarFieldSaver::handleScalarFields(size_t i, laszip_point &point)
 {
     for (const LasScalarField &field : m_standardFields)
     {
+        Q_ASSERT_X(field.sf != nullptr, __FUNCTION__, "LasScalarField has a null ptr to ccScalarField");
+        ScalarType value = field.sf->getValue(i);
+        value = std::max(field.range.min, value);
+        value = std::min(field.range.max, value);
         switch (field.id)
         {
         case LasScalarField::Intensity:
             if (field.sf)
             {
-                point.intensity = static_cast<laszip_U16>((*(field.sf))[i]);
+                point.intensity = static_cast<laszip_U16>(value);
             }
             break;
         case LasScalarField::ReturnNumber:
             if (field.sf)
             {
-                point.return_number = static_cast<laszip_U8>((*(field.sf))[i]);
+                point.return_number = static_cast<laszip_U8>(value);
             }
             break;
         case LasScalarField::NumberOfReturns:
             if (field.sf)
             {
-                point.number_of_returns = static_cast<laszip_U8>((*(field.sf))[i]);
+                point.number_of_returns = static_cast<laszip_U8>(value);
             }
             break;
         case LasScalarField::ScanDirectionFlag:
             if (field.sf)
             {
-                point.scan_direction_flag = (static_cast<laszip_U8>((*(field.sf))[i]) > 0) ? 1 : 0;
+                point.scan_direction_flag = (static_cast<laszip_U8>(value) > 0);
             }
             break;
         case LasScalarField::EdgeOfFlightLine:
             if (field.sf)
             {
-                point.edge_of_flight_line = (static_cast<laszip_U8>((*(field.sf))[i]) > 0) ? 1 : 0;
+                point.edge_of_flight_line = (static_cast<laszip_U8>(value) > 0);
             }
             break;
         case LasScalarField::Classification:
             if (field.sf)
             {
-                point.classification = static_cast<laszip_U8>((*(field.sf))[i]) & 0b00011111;
+                point.classification = static_cast<laszip_U8>(value);
             }
         case LasScalarField::SyntheticFlag:
             if (field.sf)
             {
-                point.synthetic_flag = (static_cast<laszip_U8>((*(field.sf))[i]) > 0) ? 1 : 0;
+                point.synthetic_flag = (static_cast<laszip_U8>(value) > 0);
             }
             break;
         case LasScalarField::KeypointFlag:
             if (field.sf)
             {
-                point.keypoint_flag = (static_cast<laszip_U8>((*(field.sf))[i]) > 0) ? 1 : 0;
+                point.keypoint_flag = (static_cast<laszip_U8>(value) > 0);
             }
             break;
         case LasScalarField::WithheldFlag:
             if (field.sf)
             {
-                point.withheld_flag = (static_cast<laszip_U8>((*(field.sf))[i]) > 0) ? 1 : 0;
+                point.withheld_flag = (static_cast<laszip_U8>(value) > 0);
             }
             break;
         case LasScalarField::ScanAngleRank:
             if (field.sf)
             {
-                point.extended_scan_angle = static_cast<laszip_I16>((*(field.sf))[i] / SCAN_ANGLE_SCALE);
+                point.extended_scan_angle = static_cast<laszip_I16>(value);
             }
         case LasScalarField::UserData:
             if (field.sf)
             {
-                point.user_data = static_cast<laszip_U8>((*(field.sf))[i]);
+                point.user_data = static_cast<laszip_U8>(value);
             }
             break;
         case LasScalarField::PointSourceId:
             if (field.sf)
             {
-                point.point_source_ID = static_cast<laszip_U16>((*(field.sf))[i]);
+                point.point_source_ID = static_cast<laszip_U16>(value);
             }
             break;
         case LasScalarField::GpsTime:
             if (field.sf)
             {
-                point.gps_time = static_cast<laszip_F64>((*(field.sf))[i]) + field.sf->getGlobalShift();
+                point.gps_time = static_cast<laszip_F64>(value) + field.sf->getGlobalShift();
             }
             break;
         case LasScalarField::ExtendedScanAngle:
             if (field.sf)
             {
-                point.extended_scan_angle = static_cast<laszip_I16>((*(field.sf))[i] / SCAN_ANGLE_SCALE);
+                point.extended_scan_angle = static_cast<laszip_I16>(value / SCAN_ANGLE_SCALE);
             }
             break;
         case LasScalarField::ExtendedScannerChannel:
             if (field.sf)
             {
-                point.extended_scanner_channel = static_cast<laszip_U8>((*(field.sf))[i]);
+                point.extended_scanner_channel = static_cast<laszip_U8>(value);
             }
             break;
         case LasScalarField::OverlapFlag:
             if (field.sf)
             {
-                point.extended_classification_flags |=
-                    (static_cast<laszip_U8>((*(field.sf))[i]) > 0) ? (1u << 5) : 0;
+                point.extended_classification_flags |= (static_cast<laszip_U8>(value) > 0) ? (1u << 5) : 0;
             }
             break;
         case LasScalarField::ExtendedClassification:
             if (field.sf)
             {
-                point.extended_classification = static_cast<laszip_U8>((*(field.sf))[i]);
+                point.extended_classification = static_cast<laszip_U8>(value);
             }
             break;
         case LasScalarField::ExtendedReturnNumber:
             if (field.sf)
             {
-                point.extended_return_number = static_cast<laszip_U16>((*(field.sf))[i]);
+                point.extended_return_number = static_cast<laszip_U16>(value);
             }
             break;
         case LasScalarField::ExtendedNumberOfReturns:
             if (field.sf)
             {
-                point.extended_number_of_returns = static_cast<laszip_U16>((*(field.sf))[i]);
+                point.extended_number_of_returns = static_cast<laszip_U16>(value);
             }
             break;
         case LasScalarField::NearInfrared:
             if (field.sf)
             {
-                point.rgb[3] = static_cast<laszip_U16>((*(field.sf))[i]);
+                point.rgb[3] = static_cast<laszip_U16>(value);
             }
             break;
         }
     }
 }
+
 void LasScalarFieldSaver::handleExtraFields(size_t i, laszip_point &point)
 {
     if (point.num_extra_bytes == 0 || point.extra_bytes == nullptr)
@@ -148,8 +169,6 @@ void LasScalarFieldSaver::handleExtraFields(size_t i, laszip_point &point)
     for (const LasExtraScalarField &extraField : m_extraFields)
     {
         laszip_U8 *dataStart = point.extra_bytes + extraField.byteOffset;
-        ccLog::Print(
-            "max : %d offset %d", extraField.byteSize() + extraField.byteOffset, extraField.byteOffset);
 
         Q_ASSERT(extraField.byteOffset < static_cast<unsigned int>(point.num_extra_bytes));
         Q_ASSERT(extraField.byteOffset + extraField.byteSize() <=

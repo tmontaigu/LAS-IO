@@ -121,7 +121,7 @@
                                             <property name="orientation">
                                                 <enum>Qt::Vertical</enum>
                                             </property>
-                                            <widget class="QGroupBox" name="groupBox_2">
+                                            <widget class="QGroupBox" name="scalarFieldFrame">
                                                 <property name="title">
                                                     <string>Standard Fields</string>
                                                 </property>
@@ -131,7 +131,7 @@
                                                     </item>
                                                 </layout>
                                             </widget>
-                                            <widget class="QGroupBox" name="groupBox">
+                                            <widget class="QGroupBox" name="extraScalarFieldsFrame">
                                                 <property name="title">
                                                     <string>Extra Fields</string>
                                                 </property>

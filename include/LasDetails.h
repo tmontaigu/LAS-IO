@@ -1,13 +1,29 @@
-//
-// Created by Thomas on 18/11/2020.
-//
-
+//##########################################################################
+//#                                                                        #
+//#                CLOUDCOMPARE PLUGIN: LAS-IO Plugin                      #
+//#                                                                        #
+//#  This program is free software; you can redistribute it and/or modify  #
+//#  it under the terms of the GNU General Public License as published by  #
+//#  the Free Software Foundation; version 2 of the License.               #
+//#                                                                        #
+//#  This program is distributed in the hope that it will be useful,       #
+//#  but WITHOUT ANY WARRANTY; without even the implied warranty of        #
+//#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         #
+//#  GNU General Public License for more details.                          #
+//#                                                                        #
+//#                   COPYRIGHT: Thomas Montaigu                           #
+//#                                                                        #
+//##########################################################################
 #ifndef LASDETAILS_H
 #define LASDETAILS_H
 
 #include <CCTypes.h>
+#include <QtGlobal>
+
+#include <cmath>
 #include <string>
 #include <vector>
+#include <limits>
 
 class ccPointCloud;
 class ccScalarField;
@@ -81,17 +97,52 @@ struct LasScalarField
         NearInfrared
     };
 
-    explicit constexpr LasScalarField(LasScalarField::Id id, ccScalarField *sf = nullptr);
-
-    LasScalarField(const char *name, LasScalarField::Id id, ccScalarField *sf = nullptr)
-        : name(name), id(id), sf(sf)
+    struct Range
     {
-    }
 
+        template <class T>
+        constexpr Range(T min_, T max_)
+            : min(static_cast<ScalarType>(min_)), max(static_cast<ScalarType>(max_))
+        {
+        }
+
+        template <class T> static constexpr Range ForType()
+        {
+            return Range(std::numeric_limits<T>::min(), std::numeric_limits<T>::max());
+        }
+
+        static Range ForBitSize(uint8_t numBits)
+        {
+            Range range(0.0, 0.0);
+            range.max = static_cast<ScalarType>(std::pow(2, numBits) - 1.0);
+            return range;
+        }
+
+        ScalarType min;
+        ScalarType max;
+    };
+
+  public: // Methods and Constructors
+    explicit LasScalarField(LasScalarField::Id id, ccScalarField *sf = nullptr);
+
+    const char *name() const;
+
+    //    ScalarType clampedValue(size_t index) const {
+    //        Q_ASSERT(sf != nullptr);
+    //        ScalarType value = sf->getValue(index);
+    //        if (value < range.min)
+    //        {
+    //            value = range.min;
+    //        }
+    //    }
+
+  public: // Static functions
     constexpr static const char *NameFromId(LasScalarField::Id id);
     static LasScalarField::Id IdFromName(const char *name, unsigned int targetPointFormat);
+    static LasScalarField::Range ValueRange(LasScalarField::Id id);
 
-    const char *name;
+    // TODO They should be private
+  public: // Members
     /// The Id of the LAS field this relates to.
     Id id;
     /// Pointer to the 'linked' CloudCompare scalar field.
@@ -102,6 +153,7 @@ struct LasScalarField
     /// When writing (saving points) values of the scalar field pointed by sf will
     /// be stored to the corresponding LAS field (using the Id).
     ccScalarField *sf{nullptr};
+    Range range;
 };
 
 /// Returns point the formats available for the given version.

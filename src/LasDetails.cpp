@@ -1,3 +1,19 @@
+//##########################################################################
+//#                                                                        #
+//#                CLOUDCOMPARE PLUGIN: LAS-IO Plugin                      #
+//#                                                                        #
+//#  This program is free software; you can redistribute it and/or modify  #
+//#  it under the terms of the GNU General Public License as published by  #
+//#  the Free Software Foundation; version 2 of the License.               #
+//#                                                                        #
+//#  This program is distributed in the hope that it will be useful,       #
+//#  but WITHOUT ANY WARRANTY; without even the implied warranty of        #
+//#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         #
+//#  GNU General Public License for more details.                          #
+//#                                                                        #
+//#                   COPYRIGHT: Thomas Montaigu                           #
+//#                                                                        #
+//##########################################################################
 #include "LasDetails.h"
 
 #include <laszip/laszip_api.h>
@@ -255,9 +271,66 @@ LasScalarField::Id LasScalarField::IdFromName(const char *name, unsigned int tar
     throw std::logic_error("Unknown name");
 }
 
-constexpr LasScalarField::LasScalarField(LasScalarField::Id id, ccScalarField *sf)
-    : name(NameFromId(id)), id(id), sf(sf)
+LasScalarField::Range LasScalarField::ValueRange(LasScalarField::Id id)
 {
+    switch (id)
+    {
+    case Intensity:
+        return Range::ForType<uint16_t>();
+    case ReturnNumber:
+        return Range::ForBitSize(3);
+    case NumberOfReturns:
+        return Range::ForBitSize(3);
+    case ScanDirectionFlag:
+        return Range::ForBitSize(1);
+    case EdgeOfFlightLine:
+        return Range::ForBitSize(1);
+    case Classification:
+        return Range::ForBitSize(5);
+    case SyntheticFlag:
+        return Range::ForBitSize(1);
+    case KeypointFlag:
+        return Range::ForBitSize(1);
+    case WithheldFlag:
+        return Range::ForBitSize(1);
+    case ScanAngleRank:
+        //  The real range is Range(-90, 90);
+        // but we will allow the full range
+        return Range::ForType<int8_t>();
+    case UserData:
+        return Range::ForType<uint8_t>();
+    case PointSourceId:
+        return Range::ForType<uint16_t>();
+    case GpsTime:
+        return Range(std::numeric_limits<ScalarType>::lowest(), std::numeric_limits<ScalarType>::max());
+    case ExtendedScanAngle:
+        return Range(-30'000.0, 30'000.0);
+    case ExtendedScannerChannel:
+        return Range::ForBitSize(2);
+    case OverlapFlag:
+        return Range::ForBitSize(1);
+    case ExtendedClassification:
+        return Range::ForType<uint8_t>();
+    case ExtendedReturnNumber:
+        return Range::ForBitSize(4);
+    case ExtendedNumberOfReturns:
+        return Range::ForBitSize(4);
+    case NearInfrared:
+        return Range::ForType<uint16_t>();
+    }
+
+    Q_ASSERT_X(false, __FUNCTION__, "Unhandled las scalar field range");
+    return Range::ForType<ScalarType>();
+}
+
+LasScalarField::LasScalarField(LasScalarField::Id id, ccScalarField *sf)
+    : id(id), sf(sf), range(LasScalarField::ValueRange(id))
+{
+}
+
+const char *LasScalarField::name() const
+{
+    return LasScalarField::NameFromId(id);
 }
 
 std::vector<LasScalarField> LasScalarFieldForPointFormat(unsigned int pointFormatId)
@@ -673,7 +746,7 @@ void LasExtraScalarField::InitExtraBytesVlr(laszip_vlr_struct &vlr,
 {
     strcpy(vlr.user_id, "LASF_Spec");
     vlr.record_id = 4;
-    vlr.record_length_after_header = 192 * extraFields.size();
+    vlr.record_length_after_header = 192 * static_cast<laszip_U16>(extraFields.size());
     std::fill(vlr.description, vlr.description + 32, 0);
     vlr.data = new laszip_U8[vlr.record_length_after_header];
 
@@ -803,7 +876,7 @@ void LasExtraScalarField::MatchExtraBytesToScalarFields(vector<LasExtraScalarFie
             // and each of them has the index appended to the name
             char name[50];
             unsigned int found{0};
-            for (int i = 0; i < extraScalarField.numElements(); ++i)
+            for (unsigned int i = 0; i < extraScalarField.numElements(); ++i)
             {
                 snprintf(name, 50, "%s [%d]", extraScalarField.name, i);
                 int pos = pointCloud.getScalarFieldIndexByName(name);
@@ -918,14 +991,13 @@ LasVersion SelectBestVersion(const ccPointCloud &cloud)
 
     if (!isExtendedRequired)
     {
-        // TODO: create dn ,use loop and break on first true
         // We may need extended point format because some fields need to store more value
         // than what is possible on non-extended point format.
         int classificationIdx = cloud.getScalarFieldIndexByName(LasNames::Classification);
         if (classificationIdx != -1)
         {
             const CCCoreLib::ScalarField *classification = cloud.getScalarField(classificationIdx);
-            if (classification->getMax() > std::pow(5, 2))
+            if (classification->getMax() > LasScalarField::ValueRange(LasScalarField::Classification).max)
             {
                 isExtendedRequired = true;
             }
@@ -935,7 +1007,8 @@ LasVersion SelectBestVersion(const ccPointCloud &cloud)
         if (returnNumberIdx != -1)
         {
             const CCCoreLib::ScalarField *returnNumber = cloud.getScalarField(returnNumberIdx);
-            if (returnNumber->getMax() > std::pow(4, 2))
+            if (returnNumber->getMax() >
+                LasScalarField::ValueRange(LasScalarField::LasScalarField::ReturnNumber).max)
             {
                 isExtendedRequired = true;
             }
@@ -945,7 +1018,7 @@ LasVersion SelectBestVersion(const ccPointCloud &cloud)
         if (numReturnsIdx != -1)
         {
             const CCCoreLib::ScalarField *numReturns = cloud.getScalarField(numReturnsIdx);
-            if (numReturns->getMax() > std::pow(4, 2))
+            if (numReturns->getMax() > LasScalarField::ValueRange(LasScalarField::NumberOfReturns).max)
             {
                 isExtendedRequired = true;
             }

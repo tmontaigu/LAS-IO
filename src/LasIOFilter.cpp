@@ -1,17 +1,17 @@
 //##########################################################################
 //#                                                                        #
-//#                           LasIO                                        #
+//#                CLOUDCOMPARE PLUGIN: LAS-IO Plugin                      #
 //#                                                                        #
 //#  This program is free software; you can redistribute it and/or modify  #
 //#  it under the terms of the GNU General Public License as published by  #
-//#  the Free Software Foundation; version 2 or later of the License.      #
+//#  the Free Software Foundation; version 2 of the License.               #
 //#                                                                        #
 //#  This program is distributed in the hope that it will be useful,       #
 //#  but WITHOUT ANY WARRANTY; without even the implied warranty of        #
-//#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the          #
+//#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         #
 //#  GNU General Public License for more details.                          #
 //#                                                                        #
-//#          COPYRIGHT: CloudCompare project                               #
+//#                   COPYRIGHT: Thomas Montaigu                           #
 //#                                                                        #
 //##########################################################################
 
@@ -284,7 +284,7 @@ CC_FILE_ERROR LasIOFilter::loadFile(const QString &fileName, ccHObject &containe
     unsigned int lastProgressUpdate = 0;
     progressDialog.start();
 
-    CC_FILE_ERROR error;
+    CC_FILE_ERROR error{CC_FERR_NO_ERROR};
     for (unsigned int i{0}; i < pointCount; ++i)
     {
         if (progressDialog.isCancelRequested())
@@ -432,6 +432,15 @@ CC_FILE_ERROR LasIOFilter::saveToFile(ccHObject *entity,
     }
     auto *pointCloud = static_cast<ccPointCloud *>(entity);
 
+    // optimal scale (for accuracy) --> 1e-9 because the maximum integer is roughly +/-2e+9
+    CCVector3 bbMax;
+    CCVector3 bbMin;
+    pointCloud->getBoundingBox(bbMin, bbMax);
+    CCVector3d diag = bbMax - bbMin;
+    CCVector3d optimalScale(1.0e-9 * std::max<double>(diag.x, CCCoreLib::ZERO_TOLERANCE_D),
+                            1.0e-9 * std::max<double>(diag.y, CCCoreLib::ZERO_TOLERANCE_D),
+                            1.0e-9 * std::max<double>(diag.z, CCCoreLib::ZERO_TOLERANCE_D));
+
     LasSaveDialog saveDialog(pointCloud);
     LasSavedInfo savedInfo;
     if (!pointCloud->hasMetaData(LAS_METADATA_INFO_KEY))
@@ -446,18 +455,10 @@ CC_FILE_ERROR LasIOFilter::saveToFile(ccHObject *entity,
         saveDialog.setSavedScale(CCVector3d(savedInfo.xScale, savedInfo.yScale, savedInfo.zScale));
     }
 
-    // optimal scale (for accuracy) --> 1e-9 because the maximum integer is roughly +/-2e+9
-    CCVector3 bbMax;
-    CCVector3 bbMin;
-    pointCloud->getBoundingBox(bbMin, bbMax);
-    CCVector3d diag = bbMax - bbMin;
-    CCVector3d optimalScale(1.0e-9 * std::max<double>(diag.x, CCCoreLib::ZERO_TOLERANCE_D),
-                            1.0e-9 * std::max<double>(diag.y, CCCoreLib::ZERO_TOLERANCE_D),
-                            1.0e-9 * std::max<double>(diag.z, CCCoreLib::ZERO_TOLERANCE_D));
-
     saveDialog.setOptimalScale(optimalScale);
     saveDialog.setVersionAndPointFormat(QString("1.%1").arg(QString::number(savedInfo.versionMinor)),
                                         savedInfo.pointFormat);
+    saveDialog.setExtraScalarFields(savedInfo.extraScalarFields);
 
     saveDialog.exec();
     if (saveDialog.result() == QDialog::Rejected)
@@ -470,8 +471,9 @@ CC_FILE_ERROR LasIOFilter::saveToFile(ccHObject *entity,
     std::vector<LasScalarField> fieldsToSave = saveDialog.fieldsToSave();
     LasScalarFieldSaver fieldSaver(fieldsToSave, savedInfo.extraScalarFields);
     std::unique_ptr<LasWaveformSaver> waveformSaver{nullptr};
-    if (HasWaveform(laszipHeader.point_data_format) && pointCloud->hasFWF())
+    if (saveDialog.shouldSaveWaveform())
     {
+        Q_ASSERT(HasWaveform(laszipHeader.point_data_format) && pointCloud->hasFWF());
         waveformSaver = std::make_unique<LasWaveformSaver>(*pointCloud);
     }
 
@@ -518,6 +520,15 @@ CC_FILE_ERROR LasIOFilter::saveToFile(ccHObject *entity,
         if (waveformSaver)
         {
             waveformSaver->handlePoint(i, laszipPoint);
+        }
+
+        if (saveDialog.shouldSaveRGB())
+        {
+            Q_ASSERT(HasRGB(laszipHeader.point_data_format) && pointCloud->hasColors());
+            const ccColor::Rgba &color = pointCloud->getPointColor(i);
+            laszipPoint.rgb[0] = static_cast<laszip_U16>(color.r) << 8;
+            laszipPoint.rgb[1] = static_cast<laszip_U16>(color.g) << 8;
+            laszipPoint.rgb[2] = static_cast<laszip_U16>(color.b) << 8;
         }
 
         const CCVector3 *point = pointCloud->getPoint(i);

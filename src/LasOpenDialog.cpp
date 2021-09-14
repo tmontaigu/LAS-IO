@@ -1,17 +1,17 @@
 //##########################################################################
 //#                                                                        #
-//#                              CLOUDCOMPARE                              #
+//#                CLOUDCOMPARE PLUGIN: LAS-IO Plugin                      #
 //#                                                                        #
 //#  This program is free software; you can redistribute it and/or modify  #
 //#  it under the terms of the GNU General Public License as published by  #
-//#  the Free Software Foundation; version 2 or later of the License.      #
+//#  the Free Software Foundation; version 2 of the License.               #
 //#                                                                        #
 //#  This program is distributed in the hope that it will be useful,       #
 //#  but WITHOUT ANY WARRANTY; without even the implied warranty of        #
-//#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the          #
+//#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         #
 //#  GNU General Public License for more details.                          #
 //#                                                                        #
-//#          COPYRIGHT: EDF R&D / TELECOM ParisTech (ENST-TSI)             #
+//#                   COPYRIGHT: Thomas Montaigu                           #
 //#                                                                        #
 //##########################################################################
 
@@ -89,18 +89,25 @@ void LasOpenDialog::setAvailableScalarFields(const std::vector<LasScalarField> &
 {
     for (const LasScalarField &lasScalarField : scalarFields)
     {
-        availableScalarFields->addItem(CreateItem(lasScalarField.name));
+        availableScalarFields->addItem(CreateItem(lasScalarField.name()));
     }
 
-    availableExtraScalarFields->setEnabled(!extraScalarFields.empty());
-    for (const LasExtraScalarField &lasExtraScalarField : extraScalarFields)
+    if (!extraScalarFields.empty())
     {
-        availableExtraScalarFields->addItem(CreateItem(lasExtraScalarField.name));
+        extraScalarFieldsFrame->show();
+        for (const LasExtraScalarField &lasExtraScalarField : extraScalarFields)
+        {
+            availableExtraScalarFields->addItem(CreateItem(lasExtraScalarField.name));
+        }
+        int size =
+            (availableExtraScalarFields->sizeHintForRow(0) + 2 * availableExtraScalarFields->frameWidth()) *
+            availableExtraScalarFields->count();
+        availableExtraScalarFields->setMaximumHeight(size);
     }
-    int size =
-        (availableExtraScalarFields->sizeHintForRow(0) + 2 * availableExtraScalarFields->frameWidth()) *
-        availableExtraScalarFields->count();
-    availableExtraScalarFields->setMaximumHeight(size);
+    else
+    {
+        extraScalarFieldsFrame->hide();
+    }
 }
 
 void LasOpenDialog::filterOutNotChecked(std::vector<LasScalarField> &scalarFields,
@@ -119,5 +126,5 @@ bool LasOpenDialog::isChecked(const LasExtraScalarField &lasExtraScalarField) co
 
 bool LasOpenDialog::isChecked(const LasScalarField &lasScalarField) const
 {
-    return IsCheckedIn(lasScalarField.name, *availableScalarFields);
+    return IsCheckedIn(lasScalarField.name(), *availableScalarFields);
 }

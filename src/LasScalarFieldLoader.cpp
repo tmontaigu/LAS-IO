@@ -1,3 +1,20 @@
+//##########################################################################
+//#                                                                        #
+//#                CLOUDCOMPARE PLUGIN: LAS-IO Plugin                      #
+//#                                                                        #
+//#  This program is free software; you can redistribute it and/or modify  #
+//#  it under the terms of the GNU General Public License as published by  #
+//#  the Free Software Foundation; version 2 of the License.               #
+//#                                                                        #
+//#  This program is distributed in the hope that it will be useful,       #
+//#  but WITHOUT ANY WARRANTY; without even the implied warranty of        #
+//#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         #
+//#  GNU General Public License for more details.                          #
+//#                                                                        #
+//#                   COPYRIGHT: Thomas Montaigu                           #
+//#                                                                        #
+//##########################################################################
+
 #include "LasScalarFieldLoader.h"
 
 #include <laszip/laszip_api.h>
@@ -138,7 +155,8 @@ CC_FILE_ERROR LasScalarFieldLoader::handleExtraScalarFields(ccPointCloud &pointC
 
     for (const LasExtraScalarField &extraField : m_extraScalarFields)
     {
-        if (extraField.byteOffset + extraField.byteSize() > static_cast<unsigned int>(currentPoint.num_extra_bytes))
+        if (extraField.byteOffset + extraField.byteSize() >
+            static_cast<unsigned int>(currentPoint.num_extra_bytes))
         {
             Q_ASSERT(false);
             return CC_FERR_READING;
@@ -168,7 +186,7 @@ LasScalarFieldLoader::handleScalarField(LasScalarField &sfInfo, ccPointCloud &po
 {
     if (!sfInfo.sf && currentValue != T{})
     {
-        auto newSf = new ccScalarField(sfInfo.name);
+        auto newSf = new ccScalarField(sfInfo.name());
         sfInfo.sf = newSf;
         pointCloud.addScalarField(newSf);
         if (!newSf->reserveSafe(pointCloud.capacity()))
@@ -194,7 +212,7 @@ LasScalarFieldLoader::handleGpsTime(LasScalarField &sfInfo, ccPointCloud &pointC
 {
     if (!sfInfo.sf && currentValue != 0.0)
     {
-        auto newSf = new ccScalarField(sfInfo.name);
+        auto newSf = new ccScalarField(sfInfo.name());
         sfInfo.sf = newSf;
         pointCloud.addScalarField(newSf);
         if (!newSf->reserveSafe(pointCloud.capacity()))
