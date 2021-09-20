@@ -216,6 +216,8 @@ void LasWaveformLoader::loadWaveform(ccPointCloud &pointCloud, const laszip_poin
         byteOffset = fwfDataOffset;
     }
 
+    byteOffset -= fwfDataOffset;
+
     if (byteOffset + byteCount > fwfDataCount)
     {
         ccLog::Warning("[LAS] Waveform byte count for point %u is bigger than actual fwf data",
@@ -226,7 +228,7 @@ void LasWaveformLoader::loadWaveform(ccPointCloud &pointCloud, const laszip_poin
     ccWaveform &w = pointCloud.waveforms()[pointCloud.size() - 1];
 
     w.setDescriptorID(descriptorIndex);
-    w.setDataDescription(byteOffset - fwfDataOffset, byteCount);
+    w.setDataDescription(byteOffset, byteCount);
     w.setEchoTime_ps(returnPointLocation);
     w.setBeamDir(CCVector3f(x_t, y_t, z_t));
 
