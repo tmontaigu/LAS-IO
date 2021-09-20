@@ -35,6 +35,7 @@
 
 #include <laszip/laszip_api.h>
 
+#include <ccColorScalesManager.h>
 #include <memory>
 #include <numeric>
 #include <utility>
@@ -210,21 +211,20 @@ CC_FILE_ERROR LasIOFilter::loadFile(const QString &fileName, ccHObject &containe
         pointCount = laszipHeader->number_of_point_records;
     }
 
-    auto pointCloud = std::make_unique<ccPointCloud>(QFileInfo(fileName).fileName());
+    if (pointCount >= std::numeric_limits<unsigned int>::max())
+    {
+        // TODO
+        ccLog::Error("Files with more that %lu points are not supported", pointCount);
+        return CC_FERR_NOT_IMPLEMENTED;
+    }
 
+    auto pointCloud = std::make_unique<ccPointCloud>(QFileInfo(fileName).fileName());
     if (!pointCloud->reserve(pointCount))
     {
         laszip_close_reader(laszipReader);
         laszip_clean(laszipReader);
         laszip_destroy(laszipReader);
         return CC_FERR_NOT_ENOUGH_MEMORY;
-    }
-
-    if (pointCount >= std::numeric_limits<unsigned int>::max())
-    {
-        // TODO
-        ccLog::Error("Files with more that %lud points are not supported", pointCount);
-        return CC_FERR_NOT_IMPLEMENTED;
     }
 
     std::vector<LasScalarField> availableScalarFields =
@@ -254,7 +254,7 @@ CC_FILE_ERROR LasIOFilter::loadFile(const QString &fileName, ccHObject &containe
     CCVector3 currentPoint{};
     CCVector3d shift;
     bool preserveGlobalShift{true};
-    pointCloud->enableScalarField();
+    //    pointCloud->enableScalarField();
 
     if (laszip_get_point_pointer(laszipReader, &laszipPoint))
     {
@@ -357,28 +357,77 @@ CC_FILE_ERROR LasIOFilter::loadFile(const QString &fileName, ccHObject &containe
             waveformLoader->loadWaveform(*pointCloud, *laszipPoint);
         }
 
+//        normProgress.oneStep();
         if ((i - lastProgressUpdate) == numStepsForUpdate)
         {
             normProgress.steps(i - lastProgressUpdate);
             lastProgressUpdate += (i - lastProgressUpdate);
-            QApplication::processEvents();
+//            QApplication::processEvents();
         }
     }
-    progressDialog.setLabelText("Finishing");
+//        normProgress.steps(pointCount - lastProgressUpdate);
+//        progressDialog.setLabelText("Finishing");
 
-    for (unsigned int i{0}; i < pointCloud->getNumberOfScalarFields(); ++i)
+    for (const LasScalarField &field : loader.standardFields())
     {
-        pointCloud->getScalarField(static_cast<int>(i))->computeMinAndMax();
+        if (field.sf == nullptr)
+        {
+            // It may be null if all values were the same
+            continue;
+        }
+        field.sf->computeMinAndMax();
+        switch (field.id)
+        {
+        case LasScalarField::Intensity:
+            field.sf->setColorScale(ccColorScalesManager::GetDefaultScale(ccColorScalesManager::GREY));
+            field.sf->setSaturationStart(field.sf->getMin());
+            field.sf->setSaturationStop(field.sf->getMax());
+            field.sf->setMinDisplayed(field.sf->getMin());
+            field.sf->setMaxDisplayed(field.sf->getMax());
+        case LasScalarField::ReturnNumber:
+        case LasScalarField::NumberOfReturns:
+        case LasScalarField::ScanDirectionFlag:
+        case LasScalarField::EdgeOfFlightLine:
+        case LasScalarField::Classification:
+        case LasScalarField::SyntheticFlag:
+        case LasScalarField::KeypointFlag:
+        case LasScalarField::WithheldFlag:
+        case LasScalarField::ScanAngleRank:
+        case LasScalarField::UserData:
+        case LasScalarField::PointSourceId:
+        case LasScalarField::ExtendedScannerChannel:
+        case LasScalarField::OverlapFlag:
+        case LasScalarField::ExtendedClassification:
+        case LasScalarField::ExtendedReturnNumber:
+        case LasScalarField::ExtendedNumberOfReturns:
+        case LasScalarField::NearInfrared:
+        {
+            auto cMin = static_cast<int64_t>(field.sf->getMin());
+            auto cMax = static_cast<int64_t>(field.sf->getMax());
+            int64_t steps = std::min<int64_t>(cMax - cMin + 1, 256);
+            field.sf->setColorRampSteps(steps);
+            break;
+        }
+        case LasScalarField::GpsTime:
+            field.sf->setColorScale(ccColorScalesManager::GetDefaultScale(ccColorScalesManager::BGYR));
+            break;
+        case LasScalarField::ExtendedScanAngle:
+            field.sf->setColorScale(ccColorScalesManager::GetDefaultScale(ccColorScalesManager::BGYR));
+            break;
+        }
     }
 
-    if (pointCloud->hasColors())
+    int idx = pointCloud->getScalarFieldIndexByName(LasNames::Intensity);
+    if (idx != -1)
     {
-        pointCloud->showColors(true);
+        pointCloud->setCurrentDisplayedScalarField(idx);
     }
     else if (pointCloud->getNumberOfScalarFields() > 0)
     {
         pointCloud->setCurrentDisplayedScalarField(0);
     }
+    pointCloud->showColors(pointCloud->hasColors());
+    pointCloud->showSF(!pointCloud->hasColors() && pointCloud->hasDisplayedScalarField());
 
     for (LasExtraScalarField &extraField : availableEXtraScalarFields)
     {
@@ -511,6 +560,14 @@ CC_FILE_ERROR LasIOFilter::saveToFile(ccHObject *entity,
         laszipPoint.extra_bytes = new laszip_U8[totalExtraByteSize];
     }
 
+    ccProgressDialog progressDialog(true);
+    progressDialog.setMethodTitle("Saving LAS points");
+    progressDialog.setInfo("Saving points");
+    CCCoreLib::NormalizedProgress normProgress(&progressDialog, pointCloud->size());
+    unsigned int numStepsForUpdate = 1 * pointCloud->size() / 100;
+    unsigned int lastProgressUpdate = 0;
+    progressDialog.start();
+
     CC_FILE_ERROR error = CC_FERR_NO_ERROR;
     for (unsigned int i{0}; i < pointCloud->size(); ++i)
     {
@@ -565,6 +622,13 @@ CC_FILE_ERROR LasIOFilter::saveToFile(ccHObject *entity,
         {
             error = CC_FERR_THIRD_PARTY_LIB_FAILURE;
             break;
+        }
+
+        if ((i - lastProgressUpdate) == numStepsForUpdate)
+        {
+            normProgress.steps(i - lastProgressUpdate);
+            lastProgressUpdate += (i - lastProgressUpdate);
+            QApplication::processEvents();
         }
     }
 
