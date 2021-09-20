@@ -23,6 +23,8 @@
 #include <ccPointCloud.h>
 #include <ccScalarField.h>
 
+constexpr int ExtraScalarFieldsTabIndex = 2;
+
 class MappingLabel : public QWidget
 {
   public:
@@ -184,17 +186,17 @@ void LasSaveDialog::handleComboBoxChange(int index)
 /// scalar field form.
 void LasSaveDialog::handleSelectedPointFormatChange(int index)
 {
-
-    const std::vector<unsigned int> *pointFormats =
-        PointFormatsAvailableForVersion(qPrintable(versionComboBox->currentText()));
-    if (!pointFormats)
+    if (index < 0)
     {
-        Q_ASSERT(false);
         return;
     }
 
-    if (index < 0)
+    const std::vector<unsigned int> *pointFormats =
+        PointFormatsAvailableForVersion(qPrintable(versionComboBox->currentText()));
+
+    if (!pointFormats)
     {
+        Q_ASSERT_X(false, __func__, "User was allowed to select version with to point formats");
         return;
     }
 
@@ -322,9 +324,10 @@ void LasSaveDialog::setExtraScalarFields(const std::vector<LasExtraScalarField> 
 {
     if (extraScalarFields.empty())
     {
-        extraScalarFieldsGroup->hide();
+        tabWidget->setTabEnabled(ExtraScalarFieldsTabIndex, false);
         return;
     }
+    tabWidget->setTabEnabled(ExtraScalarFieldsTabIndex, true);
 
     QStringList extraFieldsName;
     for (const LasExtraScalarField &field : extraScalarFields)
