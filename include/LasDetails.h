@@ -21,9 +21,9 @@
 #include <QtGlobal>
 
 #include <cmath>
+#include <limits>
 #include <string>
 #include <vector>
-#include <limits>
 
 class ccPointCloud;
 class ccScalarField;
@@ -127,15 +127,6 @@ struct LasScalarField
 
     const char *name() const;
 
-    //    ScalarType clampedValue(size_t index) const {
-    //        Q_ASSERT(sf != nullptr);
-    //        ScalarType value = sf->getValue(index);
-    //        if (value < range.min)
-    //        {
-    //            value = range.min;
-    //        }
-    //    }
-
   public: // Static functions
     constexpr static const char *NameFromId(LasScalarField::Id id);
     static LasScalarField::Id IdFromName(const char *name, unsigned int targetPointFormat);
@@ -220,7 +211,8 @@ struct LasExtraScalarField
     explicit LasExtraScalarField(QDataStream &dataStream);
     void writeTo(QDataStream &dataStream) const;
 
-    // Static Helper functions that works on collection of LasExtraScalarFields
+
+  public: // Static Helper functions that works on collection of LasExtraScalarFields
     static std::vector<LasExtraScalarField> ParseExtraScalarFields(const laszip_header &laszipHeader);
     static std::vector<LasExtraScalarField> ParseExtraScalarFields(const laszip_vlr_struct &extraBytesVlr);
     static void InitExtraBytesVlr(laszip_vlr_struct &vlr,
@@ -230,6 +222,7 @@ struct LasExtraScalarField
     static void MatchExtraBytesToScalarFields(std::vector<LasExtraScalarField> &extraScalarFields,
                                               const ccPointCloud &pointCloud);
 
+  public: // methods
     // LAS Spec integer value for the type
     uint8_t typeCode() const;
 

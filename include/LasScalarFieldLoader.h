@@ -41,6 +41,11 @@ class LasScalarFieldLoader
 
     CC_FILE_ERROR handleExtraScalarFields(ccPointCloud &pointCloud, const laszip_point &currentPoint);
 
+    const std::vector<LasScalarField> &standardFields() const
+    {
+        return m_standardFields;
+    }
+
   private:
     template <typename T>
     CC_FILE_ERROR handleScalarField(LasScalarField &sfInfo, ccPointCloud &pointCloud, T currentValue);

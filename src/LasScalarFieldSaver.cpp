@@ -31,7 +31,7 @@ void LasScalarFieldSaver::handleScalarFields(size_t i, laszip_point &point)
 {
     for (const LasScalarField &field : m_standardFields)
     {
-        Q_ASSERT_X(field.sf != nullptr, __FUNCTION__, "LasScalarField has a null ptr to ccScalarField");
+        Q_ASSERT_X(field.sf != nullptr, __func__, "LasScalarField has a null ptr to ccScalarField");
         ScalarType value = field.sf->getValue(i);
         value = std::max(field.range.min, value);
         value = std::min(field.range.max, value);
