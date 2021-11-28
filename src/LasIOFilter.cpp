@@ -254,7 +254,6 @@ CC_FILE_ERROR LasIOFilter::loadFile(const QString &fileName, ccHObject &containe
     CCVector3 currentPoint{};
     CCVector3d shift;
     bool preserveGlobalShift{true};
-    //    pointCloud->enableScalarField();
 
     if (laszip_get_point_pointer(laszipReader, &laszipPoint))
     {
@@ -357,16 +356,12 @@ CC_FILE_ERROR LasIOFilter::loadFile(const QString &fileName, ccHObject &containe
             waveformLoader->loadWaveform(*pointCloud, *laszipPoint);
         }
 
-//        normProgress.oneStep();
         if ((i - lastProgressUpdate) == numStepsForUpdate)
         {
             normProgress.steps(i - lastProgressUpdate);
             lastProgressUpdate += (i - lastProgressUpdate);
-//            QApplication::processEvents();
         }
     }
-//        normProgress.steps(pointCount - lastProgressUpdate);
-//        progressDialog.setLabelText("Finishing");
 
     for (const LasScalarField &field : loader.standardFields())
     {
