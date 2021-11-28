@@ -118,7 +118,16 @@ void LasSaveDialog::handleSelectedVersionChange(const QString &version)
             pointFormatComboBox->addItem(QString::number(fmt));
         }
     }
+
+    const int previousIndex = pointFormatComboBox->currentIndex();
     pointFormatComboBox->setCurrentIndex(0);
+    if (previousIndex == 0)
+    {
+        // We have to force the call here
+        // because the index did not change,
+        // But the actual point format did
+        handleSelectedPointFormatChange(0);
+    }
 }
 
 /// When the user changes the ccScalarField it wants to save in the particular LAS field,
@@ -260,9 +269,12 @@ void LasSaveDialog::handleSelectedPointFormatChange(int index)
         }
     }
 
+
     if (!HasRGB(selectedPointFormat) && !HasWaveform(selectedPointFormat))
     {
         specialScalarFieldFrame->hide();
+        waveformCheckBox->setCheckState(Qt::Unchecked);
+        rgbCheckBox->setCheckState(Qt::Unchecked);
     }
     else
     {
