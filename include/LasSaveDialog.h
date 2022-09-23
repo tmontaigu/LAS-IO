@@ -31,6 +31,8 @@ class ccPointCloud;
 
 class MappingLabel;
 
+/// This dialog is responsible for presenting to the user
+/// the different options when saving a point cloud to a LAS/LAZ file.
 class LasSaveDialog : public QDialog, public Ui::LASSaveDialog
 {
     Q_OBJECT

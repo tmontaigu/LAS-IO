@@ -38,7 +38,7 @@ typedef laszip_vlr laszip_vlr_struct;
 #define SCAN_ANGLE_SCALE 0.06
 
 /// This namespace regroups constants for all the names we use
-/// in CloudCompare ScalarField system for the standard dimensions defined by the LAS Spec.
+/// in CloudCompare's ScalarField system for the standard dimensions defined by the LAS Spec.
 ///
 /// Notice that RGB and Waveforms are missing, that is normal as they
 /// are not treated as scalar fields within CloudCompare.
@@ -65,7 +65,7 @@ constexpr const char *OverlapFlag = "Overlap Flag";
 constexpr const char *NearInfrared = "Near Infrared";
 } // namespace LasNames
 
-/// class used to link a LAS field defined by the standard to the CloudCompare
+/// class used to link a LAS field defined by the LAS standard to the CloudCompare
 /// scalar field that stores or will store the values.
 struct LasScalarField
 {
@@ -154,7 +154,8 @@ struct LasScalarField
 /// \param version version string, must be "major.minor" e.g. "1.2"
 const std::vector<unsigned int> *PointFormatsAvailableForVersion(const char *version);
 
-// TODO makes this a static ?
+/// Returns the scalar fields that correspond the the pointFormatId
+/// as per the LAS specification.
 std::vector<LasScalarField> LasScalarFieldForPointFormat(unsigned int pointFormatId);
 
 /// Array containing the available versions
@@ -303,12 +304,21 @@ inline bool HasNearInfrared(unsigned int pointFormatId)
     return pointFormatId == 8 || pointFormatId == 10;
 }
 
+/// Returns the number of bytes the vlrs amounts to.
+/// This includes the headers.
 unsigned int SizeOfVlrs(const laszip_vlr_struct *vlrs, unsigned int numVlrs);
 
+/// Returns whether the vlr is the vlr for/of LASzip compression.
 bool isLaszipVlr(const laszip_vlr_struct &);
 
+/// Returns whether the vlr describes extra bytes.
 bool isExtraBytesVlr(const laszip_vlr_struct &);
 
+/// Header part of a LAS Extended VLR
+/// 
+/// In a LAS file, EVLRs are stored after the points.
+/// 
+/// We need this struct as Waveform data can be stored inside EVLRs.
 struct EvlrHeader
 {
     static constexpr size_t SIZE = 60;
@@ -330,14 +340,21 @@ struct EvlrHeader
     friend QDataStream &operator<<(QDataStream &stream, const EvlrHeader &hdr);
 };
 
+
+/// See `SelectBestVersion`
 struct LasVersion
 {
     int pointFormat = 3;
     int minorVersion = 2;
 };
 
+/// This function looks into the point cloud
+/// and returns a LAS version + point format 
+/// that best matches what the point cloud contains
+/// as scalar fields.
 LasVersion SelectBestVersion(const ccPointCloud &cloud);
 
+/// Clones the content of the `src` vlr into the `dst` vlr.
 void cloneVlrInto(const laszip_vlr_struct &src, laszip_vlr_struct &dst);
 
 #endif // LASDETAILS_H

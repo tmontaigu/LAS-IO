@@ -53,7 +53,7 @@ static CCVector3d GetGlobalShift(FileIOFilter::LoadParameters &parameters,
 
     // set the lasOffset as default if none was provided
     if (lasOffset.norm2() != 0 &&
-        (!parameters.coordinatesShiftEnabled || !*parameters.coordinatesShiftEnabled))
+        (!parameters._coordinatesShiftEnabled || !*parameters._coordinatesShiftEnabled))
     {
         if (csModeBackup !=
             ccGlobalShiftManager::NO_DIALOG) // No dialog, practically means that we don't want any shift!

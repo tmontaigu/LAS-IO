@@ -1,7 +1,7 @@
 {
   "type": "I/O",
   "name": "LAS (I/O Plugin)",
-  "description": "Plugin to provide read and write support for LAS/LAZ files using laszip",
+  "description": "Plugin to provide read and write support for LAS/LAZ files using LASZip",
   "authors": [
     {
       "name": "Thomas Montaigu",
@@ -16,8 +16,12 @@
   ],
   "references": [
     {
-      "text": "Specifications",
-      "url": "https://www.asprs.org/divisions-committees/lidar-division/laser-las-file-format-exchange-activities"
+        "text": "Specifications",
+        "url": "https://www.asprs.org/divisions-committees/lidar-division/laser-las-file-format-exchange-activities"
+    },
+    {
+        "text": "LASZip Library",
+        "url": "https://github.com/LASzip/LASzip"
     }
   ]
 }

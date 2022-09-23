@@ -26,6 +26,8 @@
 class ccPointCloud;
 struct laszip_point;
 
+/// Class with the logic to save a point clouds
+/// scalar field into a LAS file.
 class LasScalarFieldSaver
 {
   public:
